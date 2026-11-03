@@ -1,7 +1,10 @@
 import { LOCK_DURATION_MS } from "./rules";
 import type { Capture, CaptureReview, DemoState, Monument, User } from "./types";
 
-export const SEED_VERSION = 2;
+export const SEED_VERSION = 3;
+
+/** Mock password for every demo account (US-01 mock login). Replace with real auth later. */
+export const DEMO_PASSWORD = "demo123";
 
 const MINUTE = 60_000;
 
@@ -10,6 +13,8 @@ export const seedUsers: User[] = [
   { id: "u-sam", name: "Sam Chen", email: "sam@demo.test", role: "player" },
   { id: "u-priya", name: "Priya Patel", email: "priya@demo.test", role: "player" },
   { id: "u-morgan", name: "Morgan Lee", email: "mod@demo.test", role: "moderator" },
+  // Iris's original US-01 mock account.
+  { id: "u-demo", name: "Demo Player", email: "demo@example.com", role: "player" },
 ];
 
 // Fifteen hand-entered NYC monuments: the MVP's single seeded play area.

@@ -3,61 +3,91 @@ import { Redirect, router } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 
+import { useAuth } from "../src/auth/AuthContext";
 import { Screen } from "../src/components/Screen";
 import { Banner, Button, Card, SectionTitle } from "../src/components/ui";
 import { theme } from "../src/constants/theme";
-import { seedUsers } from "../src/demo/seed";
-import { demo, useCurrentUser } from "../src/demo/store";
+import { DEMO_PASSWORD, seedUsers } from "../src/demo/seed";
 
+// US-01: email + password login and its error messages are Iris's design;
+// the demo-account shortcuts below fill the form for quick demos.
 export default function LoginScreen() {
-  const user = useCurrentUser();
+  const { isLoggedIn, login } = useAuth();
   const [email, setEmail] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
-  if (user) return <Redirect href="/" />;
+  if (isLoggedIn) return <Redirect href="/" />;
 
-  const signIn = (address: string) => {
-    try {
-      demo.login(address);
-      router.replace("/");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not sign in.");
+  async function handleLogin(address = email, secret = password) {
+    setError("");
+
+    if (!address.trim() || !secret) {
+      setError("Please enter your email and password.");
+      return;
     }
-  };
+
+    const success = await login(address, secret);
+
+    if (success) {
+      router.replace("/(tabs)");
+    } else {
+      setError("Invalid email or password.");
+    }
+  }
 
   return (
-    <Screen title="Monument Capture" subtitle="Claim real monuments by standing next to them. Hold them to win.">
+    <Screen title="Monument Capture" subtitle="Log in to your account">
       <View style={styles.hero}>
         <Ionicons color={theme.colors.primary} name="flag" size={40} />
-        <Text style={styles.heroText}>Sign in with your email to start capturing.</Text>
+        <Text style={styles.heroText}>Claim real monuments by standing next to them. Hold them to win.</Text>
       </View>
 
       <Card>
-        <Text style={styles.label}>Email</Text>
         <TextInput
           accessibilityLabel="Email"
           autoCapitalize="none"
           autoComplete="email"
-          inputMode="email"
+          keyboardType="email-address"
           onChangeText={(t) => {
             setEmail(t);
-            setError(null);
+            setError("");
           }}
-          onSubmitEditing={() => signIn(email)}
-          placeholder="you@example.com"
+          placeholder="Email"
           placeholderTextColor={theme.colors.muted}
           style={styles.input}
           value={email}
         />
-        <Button label="Sign in" icon="log-in-outline" onPress={() => signIn(email)} disabled={!email.trim()} />
-        <Text style={styles.hint}>Demo sign-in: no password. A new email creates a new player.</Text>
+        <TextInput
+          accessibilityLabel="Password"
+          autoComplete="password"
+          onChangeText={(t) => {
+            setPassword(t);
+            setError("");
+          }}
+          onSubmitEditing={() => void handleLogin()}
+          placeholder="Password"
+          placeholderTextColor={theme.colors.muted}
+          secureTextEntry
+          style={styles.input}
+          value={password}
+        />
+        {error ? <Banner tone="danger">{error}</Banner> : null}
+        <Button label="Log In" icon="log-in-outline" onPress={() => void handleLogin()} />
       </Card>
 
-      {error ? <Banner tone="danger">{error}</Banner> : null}
-
       <SectionTitle>Demo accounts</SectionTitle>
+      <Text style={styles.hint}>{`Every demo account uses the password ${DEMO_PASSWORD}. Tap one to log in.`}</Text>
       {seedUsers.map((u) => (
-        <Card key={u.id} onPress={() => signIn(u.email)} style={styles.account}>
+        <Card
+          key={u.id}
+          onPress={() => {
+            setEmail(u.email);
+            setPassword(DEMO_PASSWORD);
+            void handleLogin(u.email, DEMO_PASSWORD);
+          }}
+          style={styles.account}
+        >
           <View style={[styles.avatar, u.role === "moderator" && { backgroundColor: theme.colors.warningSoft }]}>
             <Ionicons
               color={u.role === "moderator" ? theme.colors.warning : theme.colors.primary}
@@ -85,7 +115,6 @@ const styles = StyleSheet.create({
     padding: theme.spacing.large,
   },
   heroText: { color: theme.colors.text, fontSize: 16, fontWeight: "600", textAlign: "center" },
-  label: { color: theme.colors.text, fontWeight: "700" },
   input: {
     backgroundColor: theme.colors.background,
     borderColor: theme.colors.border,
@@ -93,9 +122,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     color: theme.colors.text,
     fontSize: 16,
-    padding: 12,
+    padding: 14,
   },
-  hint: { color: theme.colors.muted, fontSize: 13 },
+  hint: { color: theme.colors.muted, marginTop: -10 },
   account: { alignItems: "center", flexDirection: "row", gap: theme.spacing.medium },
   avatar: {
     alignItems: "center",

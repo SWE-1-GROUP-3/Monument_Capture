@@ -58,7 +58,7 @@ export default function ProfileScreen() {
 
       <SectionTitle>Switch account (demo)</SectionTitle>
       {others.map((u) => (
-        <Card key={u.id} onPress={() => { demo.login(u.email); router.replace("/"); }} style={styles.account}>
+        <Card key={u.id} onPress={() => { demo.switchUser(u.id); router.replace("/"); }} style={styles.account}>
           <View style={{ flex: 1 }}>
             <Text style={styles.accountName}>{u.name}</Text>
             <Text style={styles.email}>{u.role === "moderator" ? "Moderator" : "Player"} · {u.email}</Text>

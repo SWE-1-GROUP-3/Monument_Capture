@@ -9,7 +9,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 
 import type { PlayerPosition } from "../features/capture/types";
 import * as rules from "./rules";
-import { createSeedState, SEED_VERSION } from "./seed";
+import { createSeedState, DEMO_PASSWORD, SEED_VERSION } from "./seed";
 import { demoStorage } from "./storage";
 import type { CameraMode, DemoState, Monument, ReviewDecision, SimulatedLocation, User } from "./types";
 
@@ -76,18 +76,21 @@ export function isPersisting() {
 
 export const demo = {
   // ----- Session -----
-  login(email: string, name?: string): User {
+  /**
+   * Mock email + password login (US-01). Returns the user, or null when the
+   * email is unknown or the password is wrong. Every demo account uses DEMO_PASSWORD.
+   */
+  login(email: string, password: string): User | null {
     const clean = email.trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) throw new rules.RuleError("Enter a valid email address.");
-    let user = state.users.find((u) => u.email.toLowerCase() === clean);
-    let users = state.users;
-    if (!user) {
-      const fallback = (clean.split("@")[0] ?? clean).replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-      user = { id: rules.newId("u"), email: clean, name: name?.trim() || fallback, role: "player" };
-      users = [...users, user];
-    }
-    setState({ ...state, users, sessionUserId: user.id });
+    const user = state.users.find((u) => u.email.toLowerCase() === clean);
+    if (!user || password !== DEMO_PASSWORD) return null;
+    setState({ ...state, sessionUserId: user.id });
     return user;
+  },
+  /** Demo tool: switch account without typing a password. */
+  switchUser(userId: string) {
+    if (!rules.findUser(state, userId)) return;
+    setState({ ...state, sessionUserId: userId });
   },
   logout() {
     setState({ ...state, sessionUserId: null });
