@@ -18,7 +18,17 @@ export type ProximityEvaluation =
   | { status: "inaccurate" };
 
 export type CaptureCheckState = {
-  status: "idle" | "checking" | "eligible" | "outside" | "inaccurate" | "permission-denied" | "unavailable";
+  status:
+    | "idle"
+    | "checking"
+    | "eligible"
+    | "outside"
+    | "inaccurate"
+    | "locked"
+    | "duplicate"
+    | "inactive"
+    | "permission-denied"
+    | "unavailable";
   message: string;
   distanceMeters?: number;
 };

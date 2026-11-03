@@ -60,12 +60,67 @@ mvn test
 
 ## Current starter screens
 
-- Home dashboard
-- Interactive monument map (US-02 prototype)
-- Photo capture instructions
-- Player profile and activity summary
+- Sign-in with demo accounts
+- Player: home, map with hold status, monument detail, capture flow with photo, activity (holdings + history), profile
+- Moderator: home, review queue, review with approve/reject-with-reason, monument management
 
-The sample monument data is intentionally local and can be replaced with backend calls in a later sprint.
+See **Sprint demo** below.
+
+## Sprint demo: frontend-only MVP
+
+The app now runs the full MVP loop with **no backend**. All game data and rules
+live in the browser, and the data is saved in `localStorage` so it survives a
+page refresh. Run it the usual way:
+
+```bash
+cd mobile
+npm ci --registry=https://registry.npmjs.org
+npm run web -- --port 8082
+```
+
+### Demo script (about 3 minutes)
+
+1. Open http://localhost:8082 and sign in as **Alex Rivera** (player).
+2. **Map**: green = free, orange = held, purple = yours. Tap Bethesda Fountain to see who holds it and the lock countdown.
+3. Open **Washington Square Arch** → **Teleport here (demo)** → **Capture this monument**.
+4. Try **Here, poor GPS** → **Check my location** to show the accuracy check rejecting you. Then **Teleport here** → **Check again** → **Start capture**.
+5. **Upload** any photo → **Submit for review**.
+6. **Profile → Switch account → Morgan Lee** (moderator). Open the **Queue**, open Alex's capture, pick a reason, **Approve**.
+7. Switch back to Alex: the arch is now **Yours** with a one-hour lock.
+8. **Profile → Demo tools → +1 hour**: the lock expires and the arch is free again.
+
+**Profile → Demo tools → Reset demo data** restores the starting state.
+
+### Accounts
+
+| Email | Role |
+| --- | --- |
+| alex@demo.test, sam@demo.test, priya@demo.test | Player |
+| mod@demo.test | Moderator |
+
+Any other email signs in as a new player. There are no passwords.
+
+### Where the code lives
+
+| Path | What it is |
+| --- | --- |
+| `mobile/src/demo/types.ts` | The four MVP entities: User, Monument, Capture, CaptureReview |
+| `mobile/src/demo/rules.ts` | Every game rule as pure functions: capture checks (accuracy → distance → lock), lifecycle, approve/reject, locks derived at read time, monument management |
+| `mobile/src/demo/store.ts` | The single store screens read from (`useDemoState`) and write through (`demo.*`) |
+| `mobile/src/demo/seed.ts` | 15 NYC monuments, 4 users, and a starting story (holds, an expired lock, a queue) |
+| `mobile/src/demo/location.ts` | Real GPS or the simulated position from Demo tools |
+| `mobile/src/components/DemoTools.tsx` | Demo-only controls: fake location, fast-forward clock, reset |
+
+**Moving to Supabase or Firebase:** rewrite `store.ts` so each `demo.*` action calls the backend, and move the
+checks in `rules.ts` server-side (especially the lock check on approval, which needs a transaction or constraint
+so two moderators can never create two holders). Screens should not need to change.
+
+### Known demo limitations
+
+- Anyone can pick any account; roles are not secure. That is expected without a backend.
+- The "server clock" is the browser clock plus the Demo tools offset.
+- Photos are shrunk and stored in `localStorage` (a few MB total). If it fills up, a warning appears in Demo tools.
+- On native (Expo Go), data is kept in memory only and resets when the app restarts.
 
 ## US-02: Monument Map prototype
 

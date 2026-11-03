@@ -1,70 +1,59 @@
-import * as Location from "expo-location";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import { evaluateCaptureProximity } from "./proximity";
-import type { CaptureCheckState, CaptureMonument } from "./types";
+import { getCapturePosition } from "../../demo/location";
+import { demo } from "../../demo/store";
+import type { CaptureCheckState, PlayerPosition } from "./types";
 
 const IDLE_STATE: CaptureCheckState = {
   status: "idle",
   message: "Check your location to confirm that you are close enough to begin.",
 };
 
-export function useCaptureEligibility(monument: CaptureMonument) {
+/**
+ * Runs the capture checks for one monument: location permission, then GPS
+ * accuracy, distance, lock and duplicate checks (see demo/rules.ts).
+ * When eligible, `position` holds the fix that was checked so the capture
+ * record is created from exactly that position.
+ */
+export function useCaptureEligibility(monumentId: string | undefined, playerId: string | undefined) {
   const [state, setState] = useState<CaptureCheckState>(IDLE_STATE);
+  const [checked, setChecked] = useState<{ position: PlayerPosition; simulated: boolean } | null>(null);
+
+  // A different monument means a fresh check.
+  useEffect(() => {
+    setState(IDLE_STATE);
+    setChecked(null);
+  }, [monumentId]);
 
   const verify = useCallback(async () => {
+    if (!monumentId || !playerId) return;
     setState({ status: "checking", message: "Checking your location…" });
+    setChecked(null);
 
-    try {
-      const permission = await Location.requestForegroundPermissionsAsync();
-      if (permission.status !== "granted") {
-        setState({
-          status: "permission-denied",
-          message: "Location permission is required before you can start a capture.",
-        });
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-      const evaluation = evaluateCaptureProximity(monument, {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        accuracyMeters: location.coords.accuracy,
-      });
-
-      if (evaluation.status === "inaccurate") {
-        setState({
-          status: "inaccurate",
-          message: "Your location could not be verified accurately enough. Move to an open area and retry.",
-        });
-        return;
-      }
-
-      if (evaluation.status === "outside") {
-        setState({
-          status: "outside",
-          distanceMeters: evaluation.distanceMeters,
-          message: `You are about ${evaluation.distanceMeters} m away. Move at least ${evaluation.metersToMoveCloser} m closer and retry.`,
-        });
-        return;
-      }
-
-      setState({
-        status: "eligible",
-        distanceMeters: evaluation.distanceMeters,
-        message: `Location verified. You are about ${evaluation.distanceMeters} m from the monument.`,
-      });
-    } catch {
-      setState({
-        status: "unavailable",
-        message: "Your location is currently unavailable. Check location services and retry.",
-      });
+    const result = await getCapturePosition();
+    if (!result.ok) {
+      setState({ status: result.code, message: result.message });
+      return;
     }
-  }, [monument]);
 
-  const reset = useCallback(() => setState(IDLE_STATE), []);
+    const check = demo.checkEligibility(monumentId, playerId, result.position);
+    if (!check.ok) {
+      setState({ status: check.code, message: check.message, distanceMeters: check.distanceMeters });
+      return;
+    }
 
-  return { state, verify, reset };
+    setChecked({ position: result.position, simulated: result.simulated });
+    setState({
+      status: "eligible",
+      distanceMeters: check.distanceMeters,
+      message: `Location verified. You are about ${check.distanceMeters} m from the monument.`,
+    });
+  }, [monumentId, playerId]);
+
+  const reset = useCallback(() => {
+    setState(IDLE_STATE);
+    setChecked(null);
+  }, []);
+
+  return { state, verify, reset, checked };
 }

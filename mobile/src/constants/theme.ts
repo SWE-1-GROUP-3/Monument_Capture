@@ -8,6 +8,17 @@ export const theme = {
     surface: "#ffffff",
     text: "#17231c",
     warning: "#9a6512",
+    warningSoft: "#fbf1df",
+    danger: "#b42318",
+    dangerSoft: "#fdecea",
+    info: "#2563eb",
+    infoSoft: "#e8effd",
+    /** Map/status colour for a monument held by someone else. */
+    held: "#c2410c",
+    heldSoft: "#fdeee5",
+    /** Map/status colour for a monument held by the signed-in player. */
+    mine: "#7c3aed",
+    mineSoft: "#f1eafe",
   },
   radius: {
     medium: 14,

@@ -1,0 +1,22 @@
+import * as ImagePicker from "expo-image-picker";
+
+/** Native: keep the picked file URI as-is. */
+export async function preparePhoto(uri: string): Promise<string> {
+  return uri;
+}
+
+export type PhotoSource = "camera" | "library";
+
+/** Opens the camera (or photo library) and returns a storable photo, or null if cancelled. */
+export async function pickPhoto(source: PhotoSource): Promise<string | null> {
+  if (source === "camera") {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) throw new Error("Camera permission is needed to photograph the monument.");
+  }
+  const options: ImagePicker.ImagePickerOptions = { mediaTypes: ["images"], quality: 0.7, allowsEditing: false };
+  const result = source === "camera"
+    ? await ImagePicker.launchCameraAsync(options)
+    : await ImagePicker.launchImageLibraryAsync(options);
+  const uri = result.canceled ? undefined : result.assets[0]?.uri;
+  return uri ? preparePhoto(uri) : null;
+}

@@ -5,7 +5,7 @@ import "leaflet/dist/leaflet.css";
 
 import { getValidMonuments, isValidCoordinate } from "../../utils/mapData";
 
-import { NYC_REGION, type MonumentMapProps } from "./types";
+import { MARKER_COLORS, NYC_REGION, type MonumentMapProps } from "./types";
 
 // Inline icons avoid missing Leaflet image assets in the Expo web bundle.
 function pin(color: string) {
@@ -17,17 +17,21 @@ function pin(color: string) {
     popupAnchor: [0, -14],
   });
 }
-const monumentIcon = pin("#176b47");
-const playerIcon = pin("#2563eb");
+const icons = {
+  free: pin(MARKER_COLORS.free),
+  held: pin(MARKER_COLORS.held),
+  mine: pin(MARKER_COLORS.mine),
+};
+const playerIcon = pin(MARKER_COLORS.player);
 
-export function MonumentMap({ monuments, playerLocation }: MonumentMapProps) {
+export function MonumentMap({ monuments, playerLocation, onSelect, height = 420 }: MonumentMapProps) {
   const [tileError, setTileError] = useState(false);
   return (
     <div>
       <MapContainer
         center={[NYC_REGION.latitude, NYC_REGION.longitude]}
         zoom={11}
-        style={{ width: "100%", height: 420 }}
+        style={{ width: "100%", height }}
         aria-label="New York City monument map"
       >
         <TileLayer
@@ -36,8 +40,24 @@ export function MonumentMap({ monuments, playerLocation }: MonumentMapProps) {
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {getValidMonuments(monuments).map((monument) => (
-          <Marker key={monument.id} position={[monument.latitude, monument.longitude]} icon={monumentIcon} title={monument.name}>
-            <Popup>{monument.name}</Popup>
+          <Marker key={monument.id} position={[monument.latitude, monument.longitude]} icon={icons[monument.status ?? "free"] ?? icons.free} title={monument.name}>
+            <Popup>
+              {monument.subtitle || onSelect ? (
+                <div style={{ display: "grid", gap: 4, minWidth: 160 }}>
+                  <strong>{monument.name}</strong>
+                  {monument.subtitle ? <span style={{ color: "#66756a" }}>{monument.subtitle}</span> : null}
+                  {onSelect ? (
+                    <button
+                      type="button"
+                      onClick={() => onSelect(monument.id)}
+                      style={{ marginTop: 4, padding: "6px 10px", border: 0, borderRadius: 8, background: "#176b47", color: "white", fontWeight: 700, cursor: "pointer" }}
+                    >
+                      View details
+                    </button>
+                  ) : null}
+                </div>
+              ) : monument.name}
+            </Popup>
           </Marker>
         ))}
         {isValidCoordinate(playerLocation) ? (
