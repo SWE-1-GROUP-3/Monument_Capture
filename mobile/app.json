@@ -11,7 +11,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow Monument Capture to show your location on the monument map."
+          "locationWhenInUsePermission": "Allow Monument Capture to use your location for the monument map and capture verification."
         }
       ]
     ],
