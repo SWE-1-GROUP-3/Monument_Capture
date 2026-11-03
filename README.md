@@ -18,7 +18,7 @@ No branches are merged as part of this initial setup.
 
 ## Prerequisites
 
-- Node.js 20 or newer and npm
+- Node.js 22.13+ (22.x), 24.3+ (24.x), or 26+ and npm (required by the current Expo/Metro dependencies)
 - Expo Go or an Android/iOS emulator
 - Java 17 or newer
 - Maven 3.9 or newer
@@ -61,8 +61,80 @@ mvn test
 ## Current starter screens
 
 - Home dashboard
-- Monument discovery list
+- Interactive monument map (US-02 prototype)
 - Photo capture instructions
 - Player profile and activity summary
 
 The sample monument data is intentionally local and can be replaced with backend calls in a later sprint.
+
+## US-02: Monument Map prototype
+
+The existing **Explore** tab displays nine mock NYC monuments. Pan or zoom the map,
+then select a green monument marker to see its name. No backend is needed.
+The prototype assumes the Player is logged in; authentication and server-side
+Player authorization are not implemented.
+
+### Browser preview
+
+```bash
+cd mobile
+npm ci --registry=https://registry.npmjs.org
+npm run web -- --port 8082
+```
+
+Open http://localhost:8082/explore. The web map uses React Leaflet and
+OpenStreetMap tiles, so an internet connection is required for the basemap.
+
+### iOS / Android preview
+
+```bash
+cd mobile
+npm ci --registry=https://registry.npmjs.org
+npm start
+```
+
+Open the project with an SDK-compatible Expo Go app or an iOS/Android development
+build. The native map uses `react-native-maps` (Apple Maps on iOS, Google Maps on
+Android). Standalone Android builds require a Google Maps SDK key and provider
+configuration; no key is committed in this prototype. See the
+[Expo map setup](https://docs.expo.dev/versions/latest/sdk/map-view/).
+The Expo Location plugin configures the foreground permission explanation for
+native builds; rebuild a development client after changing native configuration.
+
+### Location and empty data
+
+Opening **Explore** automatically starts the foreground location permission flow
+once per mounted screen. Re-renders do not repeat the request. Use **Show my location**
+to retry manually. A granted, valid position appears as a blue marker;
+the map stays centered on the NYC play area, so a player outside NYC may need to
+pan/zoom out to find it. Location is a one-time fix, not continuous tracking.
+Denial, unavailable positioning, or timeout shows a message, clears any previous
+player marker, and leaves the map usable. Native positioning has a 15-second
+timeout after permission is granted; late results are ignored. Browser location requires localhost or HTTPS. Retry with the same
+button; previously blocked permission may need to be enabled in browser/device settings.
+
+Mock data lives in `mobile/src/data/mapMonuments.ts`, using the reusable
+`MapMonument` type (`id`, `name`, `latitude`, `longitude`). Replace that array with
+REST API results later. Setting it to `[]` leaves the base map and controls visible
+and displays an empty-state message. The play area is a fixed NYC viewport for now;
+it does not enforce a geographic boundary. Missing arrays are treated as empty;
+invalid records and duplicate IDs are ignored. Web tile errors show a non-blocking
+message; check connectivity and pan/zoom to request tiles again.
+
+### Automated checks
+
+```bash
+cd mobile
+npm run typecheck
+npm test
+```
+
+Vitest and Testing Library cover web markers/popups, multiple and empty monument
+lists, native marker coordinate props, optional player markers, browser location
+success/denial/unavailability/timeout, retry, and native permission ordering.
+The web map tests render Leaflet in jsdom; native map SDK rendering is mocked and
+still needs device validation. Tests do not download map tiles.
+
+Future backend work: load monuments and available play areas from Spring Boot,
+handle API loading/errors, and enforce authenticated Player access server-side.
+No capture, locking, moderation, or login behavior is added by US-02.

@@ -1,54 +1,35 @@
-import { Ionicons } from "@expo/vector-icons";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Screen } from "../../src/components/Screen";
+import { MonumentMap } from "../../src/components/map/MonumentMap";
 import { theme } from "../../src/constants/theme";
-import { sampleMonuments } from "../../src/data/sampleMonuments";
+import { mapMonuments } from "../../src/data/mapMonuments";
+import { usePlayerLocation } from "../../src/hooks/usePlayerLocation";
+
+import { getValidMonuments } from "../../src/utils/mapData";
 
 export default function ExploreScreen() {
+  const { location, message, loading, locate } = usePlayerLocation();
+  const monuments = getValidMonuments(mapMonuments);
   return (
-    <Screen title="Explore" subtitle="Sample monuments ready to be connected to the API.">
-      {sampleMonuments.map((monument) => (
-        <View key={monument.id} style={styles.card}>
-          <View style={styles.iconBox}>
-            <Ionicons color={theme.colors.primary} name="location" size={24} />
-          </View>
-          <View style={styles.details}>
-            <Text style={styles.name}>{monument.name}</Text>
-            <Text style={styles.neighborhood}>{monument.neighborhood}</Text>
-            <View style={styles.metaRow}>
-              <Text style={styles.distance}>{monument.distance}</Text>
-              <Text style={styles.status}>{monument.status}</Text>
-            </View>
-          </View>
-        </View>
-      ))}
+    <Screen title="Monument map" subtitle="Explore the New York City prototype play area. Select a marker to see its name.">
+      <Text style={styles.summary}>{monuments.length} monuments · NYC · Mock data</Text>
+      <View style={styles.map}>
+        <MonumentMap monuments={monuments} playerLocation={location} />
+      </View>
+      {monuments.length === 0 ? <Text style={styles.message}>No monuments available in this play area yet.</Text> : null}
+      <Pressable accessibilityRole="button" disabled={loading} onPress={locate} style={[styles.button, loading && { opacity: 0.6 }]}>
+        <Text style={styles.buttonText}>{loading ? "Finding location…" : "Show my location"}</Text>
+      </Pressable>
+      <Text accessibilityLiveRegion="polite" style={styles.message}>{message}</Text>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.medium,
-    borderWidth: 1,
-    flexDirection: "row",
-    gap: theme.spacing.medium,
-    padding: theme.spacing.medium,
-  },
-  iconBox: {
-    alignItems: "center",
-    backgroundColor: theme.colors.primarySoft,
-    borderRadius: theme.radius.medium,
-    height: 48,
-    justifyContent: "center",
-    width: 48,
-  },
-  details: { flex: 1 },
-  name: { color: theme.colors.text, fontSize: 17, fontWeight: "800" },
-  neighborhood: { color: theme.colors.muted, marginTop: 3 },
-  metaRow: { flexDirection: "row", gap: theme.spacing.small, marginTop: 10 },
-  distance: { color: theme.colors.primary, fontSize: 12, fontWeight: "700" },
-  status: { color: theme.colors.warning, fontSize: 12, fontWeight: "700" },
+  summary: { color: theme.colors.primary, fontWeight: "700" },
+  map: { borderRadius: theme.radius.medium, overflow: "hidden", borderWidth: 1, borderColor: theme.colors.border },
+  button: { backgroundColor: theme.colors.primary, borderRadius: theme.radius.medium, padding: 14, alignItems: "center" },
+  buttonText: { color: "#ffffff", fontWeight: "700", fontSize: 16 },
+  message: { color: theme.colors.muted, lineHeight: 21 },
 });

@@ -6,7 +6,15 @@
     "orientation": "portrait",
     "scheme": "monumentcapture",
     "userInterfaceStyle": "light",
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Monument Capture to show your location on the monument map."
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
     },
