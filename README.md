@@ -138,3 +138,16 @@ still needs device validation. Tests do not download map tiles.
 Future backend work: load monuments and available play areas from Spring Boot,
 handle API loading/errors, and enforce authenticated Player access server-side.
 No capture, locking, moderation, or login behavior is added by US-02.
+
+## US-05: Capture-radius verification
+
+The **Capture** tab contains the US-05 prototype flow. It requests foreground location permission only when the player attempts to start a capture, checks GPS accuracy, and compares the player's position with the selected monument's configured radius.
+
+The prototype covers all agreed outcomes:
+
+- A player inside the radius can continue to the monument photo step.
+- A player outside the radius is told to move closer.
+- An inaccurate or unavailable location asks the player to retry.
+- Denied location permission prevents capture and explains that permission is required.
+
+`mobile/src/data/captureMonument.ts` provides the temporary selected monument until the discovery flow passes a real monument into Capture. US-06 will replace the photo-step placeholder with camera capture.
