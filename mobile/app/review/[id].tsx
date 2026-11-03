@@ -92,7 +92,7 @@ export default function ReviewScreen() {
               <>
                 {hold.status === "held" ? (
                   <Banner tone="warning" title={`Already held by ${hold.holder.name}`}>
-                    {`The lock has ${formatRemaining(hold.lockedUntil - now)} left, so this capture can't be approved. Reject it, or wait for the lock to expire.`}
+                    {`The lock has ${formatRemaining(hold.lockedUntil - now)} left, so approving will be refused. Reject it, or wait for the lock to expire.`}
                   </Banner>
                 ) : (
                   <Banner tone="info">{`Approving locks ${monument.name} to ${player?.name ?? "this player"} for ${formatRemaining(LOCK_DURATION_MS)}.`}</Banner>
@@ -121,8 +121,8 @@ export default function ReviewScreen() {
                 {error ? <Banner tone="danger">{error}</Banner> : null}
 
                 <View style={styles.actions}>
-                  <Button style={{ flex: 1 }} label="Reject" icon="close" variant="danger" onPress={() => decide("rejected")} disabled={!reason.trim()} />
-                  <Button style={{ flex: 1 }} label="Approve" icon="checkmark" onPress={() => decide("approved")} disabled={!reason.trim() || hold.status === "held"} />
+                  <Button style={{ flex: 1 }} label="Reject" icon="close" variant="danger" onPress={() => decide("rejected")} />
+                  <Button style={{ flex: 1 }} label="Approve" icon="checkmark" onPress={() => decide("approved")} />
                 </View>
               </>
             )}

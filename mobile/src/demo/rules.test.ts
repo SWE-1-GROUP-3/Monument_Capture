@@ -131,6 +131,22 @@ describe("moderation", () => {
   });
 });
 
+describe("seeded error cases", () => {
+  it("has a pending capture on a held monument that can't be approved", () => {
+    const state = createSeedState(NOW);
+    const stuck = getPendingQueue(state).find((q) => q.monument?.id === "bethesda");
+    expect(stuck?.player?.id).toBe("u-priya");
+    expect(() => reviewCapture(state, { captureId: stuck!.capture.id, moderatorId: "u-morgan", decision: "approved", reason: "looks ok" }, NOW))
+      .toThrow("already held by Sam Chen");
+  });
+
+  it("refuses a player trying to capture a monument they already hold", () => {
+    const atLiberty = { latitude: 40.6892, longitude: -74.0445, accuracyMeters: 8 };
+    expect(checkCaptureEligibility(createSeedState(NOW), "liberty", "u-alex", atLiberty, NOW))
+      .toMatchObject({ ok: false, code: "locked", message: expect.stringContaining("Held by you") });
+  });
+});
+
 describe("monument management", () => {
   it("adds and edits monuments with validation", () => {
     const base = { name: "Test Statue", neighborhood: "Midtown", description: "", latitude: 40.75, longitude: -73.98, captureRadiusMeters: 50 };

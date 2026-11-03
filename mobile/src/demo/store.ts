@@ -11,7 +11,7 @@ import type { PlayerPosition } from "../features/capture/types";
 import * as rules from "./rules";
 import { createSeedState, SEED_VERSION } from "./seed";
 import { demoStorage } from "./storage";
-import type { DemoState, Monument, ReviewDecision, SimulatedLocation, User } from "./types";
+import type { CameraMode, DemoState, Monument, ReviewDecision, SimulatedLocation, User } from "./types";
 
 let state: DemoState = loadInitialState();
 let lastSaveOk = true;
@@ -126,16 +126,23 @@ export const demo = {
   setLocation(location: SimulatedLocation) {
     setState({ ...state, settings: { ...state.settings, location } });
   },
-  /** Pretend the player is standing ~12 m from a monument (so distances look realistic). */
-  teleportTo(monument: Monument, accuracyMeters = 8) {
+  /**
+   * Pretend the player is standing `offsetMeters` north of a monument.
+   * The default 12 m keeps distances realistic; a large offset demos "too far".
+   */
+  teleportTo(monument: Monument, accuracyMeters = 8, offsetMeters = 12) {
+    const far = offsetMeters > monument.captureRadiusMeters;
     demo.setLocation({
       mode: "simulated",
-      latitude: monument.latitude + 0.0001,
+      latitude: monument.latitude + offsetMeters / 111_320,
       longitude: monument.longitude,
       accuracyMeters,
-      label: `at ${monument.name}${accuracyMeters > 50 ? " (poor GPS)" : ""}`,
-      monumentId: monument.id,
+      label: `${far ? `${offsetMeters} m from` : "at"} ${monument.name}${accuracyMeters > 50 ? " (poor GPS)" : ""}`,
+      monumentId: far ? undefined : monument.id,
     });
+  },
+  setCamera(camera: CameraMode) {
+    setState({ ...state, settings: { ...state.settings, camera } });
   },
   advanceClock(ms: number) {
     setState({ ...state, settings: { ...state.settings, clockOffsetMs: state.settings.clockOffsetMs + ms } });

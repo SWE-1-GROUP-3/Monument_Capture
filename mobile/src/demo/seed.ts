@@ -1,7 +1,7 @@
 import { LOCK_DURATION_MS } from "./rules";
 import type { Capture, CaptureReview, DemoState, Monument, User } from "./types";
 
-export const SEED_VERSION = 1;
+export const SEED_VERSION = 2;
 
 const MINUTE = 60_000;
 
@@ -111,6 +111,9 @@ export function createSeedState(now: number): DemoState {
   add("obelisk", "u-priya", 15, { decision: "approved", reviewedMinutesAgo: 10, reason: "Matches reference view." });
   // Lock expired ten minutes ago, so the arch is contestable again.
   add("washington-arch", "u-sam", 75, { decision: "approved", reviewedMinutesAgo: 70, reason: "Good daylight photo." });
+  // Submitted just before Sam's Bethesda capture was approved, so it is still in
+  // the queue but can no longer be approved (demo of the one-holder rule).
+  add("bethesda", "u-priya", 27);
   // Rejected history.
   add("flatiron-worth", "u-alex", 120, { decision: "rejected", reviewedMinutesAgo: 110, reason: "Photo is of a laptop screen, not the monument." });
   // Waiting in the moderator queue.
@@ -125,6 +128,6 @@ export function createSeedState(now: number): DemoState {
     captures,
     reviews,
     sessionUserId: null,
-    settings: { clockOffsetMs: 0, location: { mode: "real" } },
+    settings: { clockOffsetMs: 0, location: { mode: "real" }, camera: "real" },
   };
 }

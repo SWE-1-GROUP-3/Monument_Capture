@@ -63,6 +63,14 @@ export default function MonumentDetailScreen() {
             {isPlayer && view.kind === "free" ? (
               <Button label="Capture this monument" icon="camera" onPress={() => router.push(`/capture?monumentId=${monument.id}`)} />
             ) : null}
+            {isPlayer && (view.kind === "held" || view.kind === "mine") ? (
+              <Button
+                label="Try to capture anyway"
+                icon="camera-outline"
+                variant="secondary"
+                onPress={() => router.push(`/capture?monumentId=${monument.id}`)}
+              />
+            ) : null}
             {user.role === "moderator" ? (
               <Button label="Edit monument" icon="create-outline" variant="secondary" onPress={() => router.push(`/manage-monument/${monument.id}`)} />
             ) : null}

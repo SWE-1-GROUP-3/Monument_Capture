@@ -17,6 +17,21 @@ export async function pickPhoto(source: PhotoSource): Promise<string | null> {
   const result = source === "camera"
     ? await ImagePicker.launchCameraAsync(options)
     : await ImagePicker.launchImageLibraryAsync(options);
-  const uri = result.canceled ? undefined : result.assets[0]?.uri;
-  return uri ? preparePhoto(uri) : null;
+  const asset = result.canceled ? undefined : result.assets[0];
+  if (!asset?.uri) return null;
+  checkPickedFile(asset);
+  return preparePhoto(asset.uri);
+}
+
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+
+/** Rejects files that aren't images or are too big to handle. */
+export function checkPickedFile(asset: { mimeType?: string | null; fileSize?: number | null; uri: string }) {
+  const type = asset.mimeType ?? (asset.uri.startsWith("data:") ? asset.uri.slice(5, asset.uri.indexOf(";")) : "");
+  if (type && !type.startsWith("image/")) {
+    throw new Error("That file isn't a photo. Choose a JPG, PNG or HEIC image of the monument.");
+  }
+  if (asset.fileSize && asset.fileSize > MAX_UPLOAD_BYTES) {
+    throw new Error("That photo is too large (over 15 MB). Choose a smaller one.");
+  }
 }

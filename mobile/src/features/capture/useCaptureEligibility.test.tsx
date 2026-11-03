@@ -107,4 +107,28 @@ describe("capture eligibility location flow", () => {
     expect(Location.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
     expect(getDemoState().settings.location.mode).toBe("simulated");
   });
+
+  it("shows the permission error when Demo tools simulate a denied location", async () => {
+    demo.setLocation({ mode: "denied" });
+    const { result } = renderHook(() => useCaptureEligibility("washington-arch", "u-priya"));
+    await act(() => result.current.verify());
+    expect(result.current.state.status).toBe("permission-denied");
+    expect(Location.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
+  });
+
+  it("shows the unavailable error when Demo tools simulate GPS being off", async () => {
+    demo.setLocation({ mode: "unavailable" });
+    const { result } = renderHook(() => useCaptureEligibility("washington-arch", "u-priya"));
+    await act(() => result.current.verify());
+    expect(result.current.state.status).toBe("unavailable");
+  });
+
+  it("reports a too-far error after teleporting 400 m away", async () => {
+    const arch = getDemoState().monuments.find((m) => m.id === "washington-arch")!;
+    demo.teleportTo(arch, 8, 400);
+    const { result } = renderHook(() => useCaptureEligibility("washington-arch", "u-priya"));
+    await act(() => result.current.verify());
+    expect(result.current.state.status).toBe("outside");
+    expect(result.current.state.distanceMeters).toBe(400);
+  });
 });

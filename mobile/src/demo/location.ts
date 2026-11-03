@@ -17,6 +17,12 @@ const TIMEOUT_MS = 15_000;
 
 export async function getCapturePosition(): Promise<PositionResult> {
   const setting = getDemoState().settings.location;
+  if (setting.mode === "denied") {
+    return { ok: false, code: "permission-denied", message: "Location permission is required before you can start a capture. Allow location for this site in your browser settings, then retry." };
+  }
+  if (setting.mode === "unavailable") {
+    return { ok: false, code: "unavailable", message: "Your location is currently unavailable. Check location services and retry." };
+  }
   if (setting.mode === "simulated") {
     return {
       ok: true,

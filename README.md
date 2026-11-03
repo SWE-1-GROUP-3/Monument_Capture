@@ -91,6 +91,30 @@ npm run web -- --port 8082
 
 **Profile → Demo tools → Reset demo data** restores the starting state.
 
+### Error cases (how to show each one)
+
+Every error can be triggered on cue. The capture screens have a dashed **Demo** card with buttons for them, and **Profile → Demo tools** has the same switches.
+
+| Error | How to trigger it | What the player sees |
+| --- | --- | --- |
+| Invalid email | Login: type `abc`, press Sign in | "Enter a valid email address." |
+| Monument held by someone else | Bethesda Fountain → **Try to capture anyway** → Teleport here → Check | "Monument is locked. Held by Sam Chen for another 35 min." |
+| Monument already held by you | Capture Statue of Liberty as Alex | "Held by you for another …" |
+| Already submitted | Capture Brooklyn War Memorial as Alex | "Already submitted" |
+| Too far away | Check-in demo card → **400 m away** | "You are about 400 m away. Move 300 m closer." |
+| Poor GPS | Check-in demo card → **Poor GPS** | "Location not accurate enough (needs 50 m or better)" |
+| Location permission denied | Check-in demo card → **Location denied** | "Location permission needed" |
+| GPS unavailable | Check-in demo card → **GPS unavailable** | "Location unavailable" |
+| Camera permission denied | Photo step demo card → **Permission denied** → Open camera | "Camera access blocked" + how to allow it |
+| No camera | Photo step → **No camera** | "No camera found" + upload instead |
+| Camera in use | Photo step → **Camera in use** | "Camera is in use" |
+| Not a photo | **Upload a photo instead** → pick a .txt or .pdf | "That file isn't a photo." |
+| Approve without a reason | Moderator review → Approve with an empty reason | "Enter a reason for your decision." |
+| Approve when already held (one-holder rule) | As Morgan, open Priya's **Bethesda Fountain** capture → Approve | "This monument is already held by Sam Chen … Reject this capture instead." |
+| Bad monument data | Monuments → Add → latitude `123` | "Latitude must be between -90 and 90." |
+
+The real camera errors also work without the switches. Blocking camera access in the browser (or opening the app on plain `http://` from another device) shows the same messages. The web camera uses a live preview (`getUserMedia`), so it needs `localhost` or `https`.
+
 ### Accounts
 
 | Email | Role |

@@ -22,7 +22,7 @@ export default function ExploreScreen() {
 
   const views = monumentViews(state, user?.id, now);
   const sim = state.settings.location;
-  const playerLocation = sim.mode === "simulated" ? { latitude: sim.latitude, longitude: sim.longitude } : location;
+  const playerLocation = sim.mode === "simulated" ? { latitude: sim.latitude, longitude: sim.longitude } : sim.mode === "real" ? location : null;
   const listed = views.filter((v) => filter === "all" || (filter === "free" ? v.kind === "free" : v.kind !== "free"));
   const open = (id: string) => router.push(`/monument/${id}`);
 
@@ -41,6 +41,8 @@ export default function ExploreScreen() {
 
       {sim.mode === "simulated" ? (
         <Banner tone="info" icon="locate">{`Demo location: ${sim.label}. Change it in Profile → Demo tools.`}</Banner>
+      ) : sim.mode !== "real" ? (
+        <Banner tone="warning" icon="locate">{`Demo: location ${sim.mode === "denied" ? "permission denied" : "unavailable"}. You can still browse the map, but captures will be refused.`}</Banner>
       ) : (
         <View style={styles.locateRow}>
           <Text accessibilityLiveRegion="polite" style={styles.message}>{message}</Text>

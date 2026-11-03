@@ -57,12 +57,19 @@ export type CaptureReview = {
 /** Demo-only settings. Not part of the real data model. */
 export type SimulatedLocation =
   | { mode: "real" }
+  /** Demo error cases: behave as if the browser/device refused or failed. */
+  | { mode: "denied" }
+  | { mode: "unavailable" }
   | { mode: "simulated"; latitude: number; longitude: number; accuracyMeters: number; label: string; monumentId?: string };
+
+/** "real" uses the device camera; the others force an error for the demo. */
+export type CameraMode = "real" | "denied" | "missing" | "busy";
 
 export type DemoSettings = {
   /** Milliseconds added to the real clock, so locks can be fast-forwarded in a demo. */
   clockOffsetMs: number;
   location: SimulatedLocation;
+  camera: CameraMode;
 };
 
 export type DemoState = {

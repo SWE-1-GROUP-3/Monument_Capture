@@ -25,6 +25,8 @@ export function DemoTools() {
       <Text style={styles.label}>Location</Text>
       <View style={styles.wrap}>
         <Chip label="Real GPS" selected={loc.mode === "real"} onPress={() => demo.setLocation({ mode: "real" })} />
+        <Chip label="Permission denied" selected={loc.mode === "denied"} onPress={() => demo.setLocation({ mode: "denied" })} />
+        <Chip label="GPS unavailable" selected={loc.mode === "unavailable"} onPress={() => demo.setLocation({ mode: "unavailable" })} />
         <Chip
           label="Far away"
           selected={isAt(FAR_AWAY.latitude, FAR_AWAY.longitude)}
@@ -52,8 +54,26 @@ export function DemoTools() {
           <Text style={styles.status}>{`Simulated position ${loc.label}, ±${loc.accuracyMeters} m.`}</Text>
         </>
       ) : (
-        <Text style={styles.status}>Using this device's real location.</Text>
+        <Text style={styles.status}>
+          {loc.mode === "denied"
+            ? "Simulating a player who refused location permission."
+            : loc.mode === "unavailable"
+              ? "Simulating location services being off."
+              : "Using this device's real location."}
+        </Text>
       )}
+
+      <Text style={styles.label}>Camera</Text>
+      <View style={styles.wrap}>
+        {(["real", "denied", "missing", "busy"] as const).map((m) => (
+          <Chip
+            key={m}
+            label={{ real: "Real camera", denied: "Permission denied", missing: "No camera", busy: "Camera in use" }[m]}
+            selected={state.settings.camera === m}
+            onPress={() => demo.setCamera(m)}
+          />
+        ))}
+      </View>
 
       <Text style={styles.label}>Game clock</Text>
       <Text style={styles.status}>
