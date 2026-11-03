@@ -3,6 +3,8 @@ import type { MapCoordinate } from "../../types/mapMonument";
 export type MonumentMapProps = {
   monuments?: readonly unknown[] | null;
   playerLocation: MapCoordinate | null;
+  nowMs: number;
+  onViewDetails: (monumentId: string) => void;
 };
 
 export const NYC_REGION = {
