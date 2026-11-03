@@ -25,7 +25,7 @@ export default function ActivityScreen() {
         </Card>
       ) : (
         holdings.map(({ monument, hold }) => (
-          <Card key={monument.id} onPress={() => router.push(`/monument/${monument.id}`)} style={styles.row}>
+          <Card key={monument.id} onPress={() => router.push(`/monuments/${monument.id}`)} style={styles.row}>
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>{monument.name}</Text>
               <Text style={styles.meta}>{monument.neighborhood}</Text>

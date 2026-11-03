@@ -59,7 +59,7 @@ function PlayerHome({ state, user, now }: { state: DemoState; user: User; now: n
         </Card>
       ) : (
         holdings.map(({ monument, hold }) => (
-          <Card key={monument.id} onPress={() => router.push(`/monument/${monument.id}`)} style={styles.row}>
+          <Card key={monument.id} onPress={() => router.push(`/monuments/${monument.id}`)} style={styles.row}>
             <View style={[styles.dot, { backgroundColor: theme.colors.mine }]} />
             <View style={{ flex: 1 }}>
               <Text style={styles.rowTitle}>{monument.name}</Text>

@@ -127,7 +127,7 @@ export default function ReviewScreen() {
               </>
             )}
 
-            <Card style={styles.row} onPress={() => router.push(`/monument/${monument.id}`)}>
+            <Card style={styles.row} onPress={() => router.push(`/monuments/${monument.id}`)}>
               <Text style={styles.linkText}>View monument</Text>
               <Pill kind={hold.status === "held" ? "held" : "free"} />
             </Card>

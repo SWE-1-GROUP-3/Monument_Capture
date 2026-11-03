@@ -33,13 +33,25 @@ export function monumentViews(state: DemoState, viewerId: string | undefined, no
     .map((m) => monumentView(state, m, viewerId, now));
 }
 
+/**
+ * Converts a store monument into the map's MapMonument shape (US-03), whose
+ * hold is derived from the approved capture/review, never stored on the monument.
+ */
 export function toMapMonument(view: MonumentView): MapMonument {
+  const hold = view.hold;
   return {
     id: view.monument.id,
     name: view.monument.name,
     latitude: view.monument.latitude,
     longitude: view.monument.longitude,
-    status: view.kind === "inactive" ? "free" : view.kind,
-    subtitle: view.statusLine,
+    captureRadiusMeters: view.monument.captureRadiusMeters,
+    hold: hold.status === "held"
+      ? {
+          holderDisplayName: hold.holder.name,
+          // An invalid lock time becomes an unparseable string, which the map shows as "Status unknown".
+          lockExpiresAt: Number.isFinite(hold.lockedUntil) ? new Date(hold.lockedUntil).toISOString() : "invalid",
+          heldByViewer: view.kind === "mine",
+        }
+      : null,
   };
 }

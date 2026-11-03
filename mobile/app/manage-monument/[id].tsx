@@ -51,7 +51,7 @@ export default function EditMonumentScreen() {
   const save = () => {
     try {
       const saved = demo.saveMonument(input);
-      router.replace(`/monument/${saved.id}`);
+      router.replace(`/monuments/${saved.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save.");
     }
@@ -80,8 +80,16 @@ export default function EditMonumentScreen() {
             {coordsValid ? (
               <View style={styles.map}>
                 <MonumentMap
-                  monuments={[{ id: "preview", name: form.name || "New monument", latitude: input.latitude, longitude: input.longitude }]}
+                  monuments={[{
+                    id: "preview",
+                    name: form.name || "New monument",
+                    latitude: input.latitude,
+                    longitude: input.longitude,
+                    captureRadiusMeters: input.captureRadiusMeters,
+                    hold: null,
+                  }]}
                   playerLocation={null}
+                  nowMs={Date.now()}
                   height={220}
                 />
               </View>

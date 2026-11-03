@@ -3,53 +3,75 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Screen } from "../../src/components/Screen";
+import { availabilityAppearance, viewerHoldAppearance } from "../../src/components/map/availabilityAppearance";
 import { MonumentMap } from "../../src/components/map/MonumentMap";
-import { MARKER_COLORS } from "../../src/components/map/types";
 import { Banner, Card, Chip, Pill } from "../../src/components/ui";
 import { theme } from "../../src/constants/theme";
-import { useCurrentUser, useDemoState, useNow } from "../../src/demo/store";
+import { useCurrentUser, useDemoState } from "../../src/demo/store";
 import { monumentViews, toMapMonument } from "../../src/demo/views";
 import { usePlayerLocation } from "../../src/hooks/usePlayerLocation";
+import { useStatusTime } from "../../src/hooks/useStatusTime";
 
 type Filter = "all" | "free" | "held";
 
+// US-02 map (Bill) + US-03 availability legend, live status and details navigation (Yuming),
+// fed from the shared demo store so holds come from approved captures.
 export default function ExploreScreen() {
   const user = useCurrentUser();
   const state = useDemoState();
-  const now = useNow(5000);
   const { location, message, loading, locate } = usePlayerLocation();
+  const nowMs = useStatusTime();
   const [filter, setFilter] = useState<Filter>("all");
 
-  const views = monumentViews(state, user?.id, now);
+  const views = monumentViews(state, user?.id, nowMs);
+  const monuments = views.map(toMapMonument);
   const sim = state.settings.location;
-  const playerLocation = sim.mode === "simulated" ? { latitude: sim.latitude, longitude: sim.longitude } : sim.mode === "real" ? location : null;
+  const playerLocation = sim.mode === "simulated"
+    ? { latitude: sim.latitude, longitude: sim.longitude }
+    : sim.mode === "real" ? location : null;
+  const isPlayer = user?.role === "player";
   const listed = views.filter((v) => filter === "all" || (filter === "free" ? v.kind === "free" : v.kind !== "free"));
-  const open = (id: string) => router.push(`/monument/${id}`);
+
+  const openDetails = (monumentId: string) => router.push({ pathname: "/monuments/[monumentId]", params: { monumentId } });
+  const legend = [
+    ...Object.values(availabilityAppearance),
+    ...(isPlayer ? [viewerHoldAppearance] : []),
+    { color: theme.colors.info, label: sim.mode === "simulated" ? "Your location (simulated)" : "Your location" },
+  ];
 
   return (
-    <Screen title="Monument map" subtitle="New York City play area. Tap a marker or a row to see who holds it.">
-      <View style={styles.legend}>
-        <Legend color={MARKER_COLORS.free} label="Free" />
-        <Legend color={MARKER_COLORS.held} label="Held" />
-        {user?.role === "player" ? <Legend color={MARKER_COLORS.mine} label="Yours" /> : null}
-        <Legend color={MARKER_COLORS.player} label={sim.mode === "simulated" ? "You (simulated)" : "You"} />
-      </View>
-
+    <Screen title="Monument map" subtitle="New York City play area. Select a marker to see its status, or tap a row below.">
+      <Text style={styles.summary}>{monuments.length} monuments · NYC</Text>
       <View style={styles.map}>
-        <MonumentMap monuments={views.map(toMapMonument)} playerLocation={playerLocation} onSelect={open} />
+        <MonumentMap
+          monuments={monuments}
+          playerLocation={playerLocation}
+          nowMs={nowMs}
+          onViewDetails={openDetails}
+          onStartCapture={isPlayer ? (monumentId) => router.push(`/capture?monumentId=${monumentId}`) : undefined}
+        />
       </View>
+      <View accessibilityLabel="Map legend" style={styles.legend}>
+        {legend.map(({ color, label }) => (
+          <View key={label} style={styles.legendItem}>
+            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[styles.legendDot, { backgroundColor: color }]} />
+            <Text style={styles.legendText}>{label}</Text>
+          </View>
+        ))}
+      </View>
+      {monuments.length === 0 ? <Text style={styles.message}>No monuments available in this play area yet.</Text> : null}
 
       {sim.mode === "simulated" ? (
         <Banner tone="info" icon="locate">{`Demo location: ${sim.label}. Change it in Profile → Demo tools.`}</Banner>
       ) : sim.mode !== "real" ? (
         <Banner tone="warning" icon="locate">{`Demo: location ${sim.mode === "denied" ? "permission denied" : "unavailable"}. You can still browse the map, but captures will be refused.`}</Banner>
       ) : (
-        <View style={styles.locateRow}>
-          <Text accessibilityLiveRegion="polite" style={styles.message}>{message}</Text>
-          <Pressable accessibilityRole="button" disabled={loading} onPress={locate} style={[styles.locate, loading && { opacity: 0.6 }]}>
-            <Text style={styles.locateText}>{loading ? "Finding…" : "Show my location"}</Text>
+        <>
+          <Pressable accessibilityRole="button" disabled={loading} onPress={locate} style={[styles.button, loading && { opacity: 0.6 }]}>
+            <Text style={styles.buttonText}>{loading ? "Finding location…" : "Show my location"}</Text>
           </Pressable>
-        </View>
+          <Text accessibilityLiveRegion="polite" style={styles.message}>{message}</Text>
+        </>
       )}
 
       <View style={styles.chips}>
@@ -57,10 +79,9 @@ export default function ExploreScreen() {
         <Chip label={`Free (${views.filter((v) => v.kind === "free").length})`} selected={filter === "free"} onPress={() => setFilter("free")} />
         <Chip label={`Held (${views.filter((v) => v.kind !== "free").length})`} selected={filter === "held"} onPress={() => setFilter("held")} />
       </View>
-
       {listed.length === 0 ? <Text style={styles.message}>No monuments match this filter.</Text> : null}
       {listed.map((v) => (
-        <Card key={v.monument.id} onPress={() => open(v.monument.id)} style={styles.row}>
+        <Card key={v.monument.id} onPress={() => openDetails(v.monument.id)} style={styles.row}>
           <View style={{ flex: 1 }}>
             <Text style={styles.rowTitle}>{v.monument.name}</Text>
             <Text style={styles.rowMeta}>{v.monument.neighborhood} · {v.statusLine}</Text>
@@ -72,25 +93,16 @@ export default function ExploreScreen() {
   );
 }
 
-function Legend({ color, label }: { color: string; label: string }) {
-  return (
-    <View style={styles.legendItem}>
-      <View style={[styles.legendDot, { backgroundColor: color }]} />
-      <Text style={styles.legendText}>{label}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
+  summary: { color: theme.colors.primary, fontWeight: "700" },
+  map: { borderRadius: theme.radius.medium, overflow: "hidden", borderWidth: 1, borderColor: theme.colors.border },
   legend: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.medium },
-  legendItem: { alignItems: "center", flexDirection: "row", gap: 6 },
-  legendDot: { borderColor: "#ffffff", borderRadius: 7, borderWidth: 2, height: 14, width: 14 },
-  legendText: { color: theme.colors.text, fontWeight: "600" },
-  map: { borderColor: theme.colors.border, borderRadius: theme.radius.medium, borderWidth: 1, overflow: "hidden" },
-  locateRow: { alignItems: "center", flexDirection: "row", gap: theme.spacing.medium },
-  locate: { borderColor: theme.colors.primary, borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8 },
-  locateText: { color: theme.colors.primary, fontWeight: "700" },
-  message: { color: theme.colors.muted, flex: 1, lineHeight: 20 },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
+  legendDot: { width: 12, height: 12, borderRadius: 6 },
+  legendText: { color: theme.colors.text, fontSize: 13 },
+  button: { backgroundColor: theme.colors.primary, borderRadius: theme.radius.medium, padding: 14, alignItems: "center" },
+  buttonText: { color: "#ffffff", fontWeight: "700", fontSize: 16 },
+  message: { color: theme.colors.muted, lineHeight: 21 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.small },
   row: { alignItems: "center", flexDirection: "row", gap: theme.spacing.medium },
   rowTitle: { color: theme.colors.text, fontSize: 16, fontWeight: "800" },

@@ -80,9 +80,9 @@ npm run web -- --port 8082
 
 ### Demo script (about 3 minutes)
 
-1. Open http://localhost:8082 and sign in as **Alex Rivera** (player).
+1. Open http://localhost:8082 and log in as **Alex Rivera** (tap the shortcut, or `alex@demo.test` / `demo123`).
 2. **Map**: green = free, orange = held, purple = yours. Tap Bethesda Fountain to see who holds it and the lock countdown.
-3. Open **Washington Square Arch** → **Teleport here (demo)** → **Capture this monument**.
+3. Open **Washington Square Arch** → **Teleport here (demo)** → **Start Capture**.
 4. Try **Here, poor GPS** → **Check my location** to show the accuracy check rejecting you. Then **Teleport here** → **Check again** → **Start capture**.
 5. **Upload** any photo → **Submit for review**.
 6. **Profile → Switch account → Morgan Lee** (moderator). Open the **Queue**, open Alex's capture, pick a reason, **Approve**.
@@ -97,7 +97,8 @@ Every error can be triggered on cue. The capture screens have a dashed **Demo** 
 
 | Error | How to trigger it | What the player sees |
 | --- | --- | --- |
-| Invalid email | Login: type `abc`, press Sign in | "Enter a valid email address." |
+| Wrong login | Login: any email with a wrong password | "Invalid email or password." |
+| Empty login | Login: press Log In with empty fields | "Please enter your email and password." |
 | Monument held by someone else | Bethesda Fountain → **Try to capture anyway** → Teleport here → Check | "Monument is locked. Held by Sam Chen for another 35 min." |
 | Monument already held by you | Capture Statue of Liberty as Alex | "Held by you for another …" |
 | Already submitted | Capture Brooklyn War Memorial as Alex | "Already submitted" |
@@ -115,14 +116,16 @@ Every error can be triggered on cue. The capture screens have a dashed **Demo** 
 
 The real camera errors also work without the switches. Blocking camera access in the browser (or opening the app on plain `http://` from another device) shows the same messages. The web camera uses a live preview (`getUserMedia`), so it needs `localhost` or `https`.
 
-### Accounts
+### Accounts (US-01 mock login)
+
+Every demo account uses the password **`demo123`**. The login screen also has one-tap shortcuts.
 
 | Email | Role |
 | --- | --- |
-| alex@demo.test, sam@demo.test, priya@demo.test | Player |
+| alex@demo.test, sam@demo.test, priya@demo.test, demo@example.com | Player |
 | mod@demo.test | Moderator |
 
-Any other email signs in as a new player. There are no passwords.
+An unknown email or wrong password shows "Invalid email or password."
 
 ### Where the code lives
 
@@ -133,6 +136,9 @@ Any other email signs in as a new player. There are no passwords.
 | `mobile/src/demo/store.ts` | The single store screens read from (`useDemoState`) and write through (`demo.*`) |
 | `mobile/src/demo/seed.ts` | 15 NYC monuments, 4 users, and a starting story (holds, an expired lock, a queue) |
 | `mobile/src/demo/location.ts` | Real GPS or the simulated position from Demo tools |
+| `mobile/src/auth/AuthContext.tsx` | US-01 `useAuth()` (Iris), backed by the store's session |
+| `mobile/src/utils/monumentAvailability.ts` | US-03 available / locked / unknown status (Yuming) |
+| `mobile/app/monuments/[monumentId].tsx` | US-03 monument details with live lock countdown |
 | `mobile/src/components/DemoTools.tsx` | Demo-only controls: fake location, fast-forward clock, reset |
 
 **Moving to Supabase or Firebase:** rewrite `store.ts` so each `demo.*` action calls the backend, and move the

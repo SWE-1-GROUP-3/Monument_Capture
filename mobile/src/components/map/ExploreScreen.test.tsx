@@ -1,16 +1,21 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import type { PropsWithChildren } from "react";
-import { afterEach, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useEffect, type PropsWithChildren } from "react";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import ExploreScreen from "../../../app/(tabs)/explore";
-import { seedMonuments } from "../../demo/seed";
+import { __setDemoStateForTests } from "../../demo/store";
+import { createSeedState, seedMonuments } from "../../demo/seed";
 
 vi.mock("react-native", () => vi.importActual("react-native-web"));
 vi.mock("../Screen", () => ({ Screen: ({ children }: PropsWithChildren) => <div>{children}</div> }));
 vi.mock("./MonumentMap", () => import("./MonumentMap.web"));
 vi.mock("../../location/requestPlayerLocation", () => import("../../location/requestPlayerLocation.web"));
 vi.mock("@expo/vector-icons", () => ({ Ionicons: () => null }));
-vi.mock("expo-router", () => ({ router: { push: vi.fn() } }));
-afterEach(cleanup);
+const push = vi.hoisted(() => vi.fn());
+vi.mock("expo-router", () => ({ router: { push }, useFocusEffect: (callback: () => (() => void)) => {
+  useEffect(callback, [callback]);
+} }));
+beforeEach(() => __setDemoStateForTests(createSeedState(Date.now())));
+afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 it("opening Explore initiates permission flow once and keeps the map usable after denial", async () => {
   const getCurrentPosition = vi.fn((_success, failure) => failure({ code: 1 }));
@@ -23,4 +28,51 @@ it("opening Explore initiates permission flow once and keeps the map usable afte
   expect(getCurrentPosition).toHaveBeenCalledTimes(1);
   fireEvent.click(screen.getByRole("button", { name: "Show my location" }));
   await waitFor(() => expect(getCurrentPosition).toHaveBeenCalledTimes(2));
+});
+
+
+it("refreshes status on clock ticks without repeating location requests or remounting the map", async () => {
+  vi.useFakeTimers();
+  const getCurrentPosition = vi.fn((_success, failure) => failure({ code: 1 }));
+  Object.defineProperty(navigator, "geolocation", { configurable: true, value: { getCurrentPosition } });
+  const { container } = render(<ExploreScreen />);
+  await act(async () => {});
+  const map = container.querySelector(".leaflet-container");
+  expect(vi.getTimerCount()).toBeGreaterThan(0);
+  await act(() => vi.advanceTimersByTimeAsync(2000));
+  expect(getCurrentPosition).toHaveBeenCalledTimes(1);
+  expect(container.querySelector(".leaflet-container")).toBe(map);
+  expect(container.querySelectorAll(".leaflet-marker-icon")).toHaveLength(seedMonuments.length);
+});
+
+
+it("places a wrapping four-item legend below the map and above the location button", async () => {
+  Object.defineProperty(navigator, "geolocation", { configurable: true, value: {
+    getCurrentPosition: vi.fn((_success, failure) => failure({ code: 1 })),
+  } });
+  const { container } = render(<ExploreScreen />);
+  await screen.findByText("Location permission denied. You can still explore the map.");
+  const legend = screen.getByLabelText("Map legend");
+  for (const label of ["Available", "Locked", "Status unknown", "Your location"]) {
+    expect(legend.textContent).toContain(label);
+  }
+  expect(legend.children).toHaveLength(4);
+  expect(getComputedStyle(legend).flexWrap).toBe("wrap");
+  expect(container.querySelector(".leaflet-container")!.compareDocumentPosition(legend) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(legend.compareDocumentPosition(screen.getByRole("button", { name: "Show my location" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
+
+it("opens details with only the selected monument ID from the popup action", async () => {
+  push.mockClear();
+  Object.defineProperty(navigator, "geolocation", { configurable: true, value: {
+    getCurrentPosition: vi.fn((_success, failure) => failure({ code: 1 })),
+  } });
+  render(<ExploreScreen />);
+  await screen.findByText("Location permission denied. You can still explore the map.");
+  // Bethesda Fountain is held in the demo seed data.
+  fireEvent.click(screen.getByRole("button", { name: "Bethesda Fountain: Locked" }));
+  expect(push).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("link", { name: "View details" }));
+  expect(push).toHaveBeenCalledExactlyOnceWith({ pathname: "/monuments/[monumentId]", params: { monumentId: "bethesda" } });
 });
