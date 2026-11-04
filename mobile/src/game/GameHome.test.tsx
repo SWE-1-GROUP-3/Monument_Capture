@@ -159,3 +159,23 @@ it("moderator bar: Profile, Queue with a pending badge, Monuments", () => {
   fireEvent.click(within(queue).getByText(/Columbus Monument/));
   expect(router.push).toHaveBeenCalledWith(expect.stringMatching(/^\/review\//));
 });
+
+it("uses OpenStreetMap tiles when no CARTO key is configured (CARTO now requires one)", () => {
+  deny();
+  const { container } = renderAs("u-alex");
+  const tile = container.querySelector("img.leaflet-tile") as HTMLImageElement | null;
+  expect(tile?.src).toContain("tile.openstreetmap.org");
+  expect(container.innerHTML).not.toContain("cartocdn");
+});
+
+it("keeps the play area in view when real GPS puts the player far from every monument", async () => {
+  // Somewhere in Brooklyn, kilometres from the nearest seeded monument.
+  const getCurrentPosition = vi.fn((ok: (p: { coords: { latitude: number; longitude: number } }) => void) =>
+    ok({ coords: { latitude: 40.64, longitude: -73.95 } }));
+  Object.defineProperty(navigator, "geolocation", { configurable: true, value: { getCurrentPosition } });
+  const { container } = renderAs("u-alex");
+  expect(await screen.findByText(/0 in range · nearest Soldiers' and Sailors' Arch, \d+\.\d km/)).toBeTruthy();
+  // Every monument pin is still on the map, plus the player's own marker.
+  expect(container.querySelectorAll(".mc-mon")).toHaveLength(getDemoState().monuments.filter((m) => m.active).length);
+  expect(container.querySelector(".mc-me")).toBeTruthy();
+});

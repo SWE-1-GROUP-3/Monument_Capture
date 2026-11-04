@@ -6,7 +6,7 @@ import "leaflet/dist/leaflet.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Circle, MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
 
-import { NYC_REGION } from "../components/map/types";
+import { BASEMAP } from "./basemap";
 import { getPendingQueue } from "../demo/rules";
 import {
   getAreaName,
@@ -14,6 +14,7 @@ import {
   getEffectivePosition,
   getInitials,
   getMonumentsInRange,
+  getNearestMonument,
   getPlayerLevel,
   monumentIcon,
 } from "../demo/selectors";
@@ -29,8 +30,14 @@ import type { GameHomeProps, SheetId } from "./types";
 const MIN_ZOOM = 13;
 const MAX_ZOOM = 19;
 const PLAYER_ZOOM = 17;
+/** Only zoom to the player when they are this close to a monument; otherwise show the play area. */
+const NEAR_PLAY_AREA_M = 2000;
 
 /** Stable 0–2 s animation delay per monument, so pins bob out of step. */
+function formatKm(m: number) {
+  return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${m} m`;
+}
+
 function bobDelay(id: string) {
   let h = 0;
   for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) % 997;
@@ -97,6 +104,15 @@ export function GameHome({ user, initialSheet, initialMonumentId, justSubmitted 
   const views = monumentViews(state, user.id, now);
   const inRange = getMonumentsInRange(state, position);
   const ringRadius = getCaptureRingRadius(state, position);
+  const nearest = getNearestMonument(state, position);
+  const nearPlayArea = !!nearest && nearest.distanceMeters <= NEAR_PLAY_AREA_M;
+  // Centre of the active monuments: the view when the player is far away or unknown.
+  const active = state.monuments.filter((m) => m.active);
+  const lats = active.map((m) => m.latitude);
+  const lngs = active.map((m) => m.longitude);
+  const playCenter: [number, number] = active.length
+    ? [(Math.min(...lats) + Math.max(...lats)) / 2, (Math.min(...lngs) + Math.max(...lngs)) / 2]
+    : [40.751, -73.997];
   const initials = getInitials(user.name);
   const level = getPlayerLevel(state, user.id);
   const pendingCount = getPendingQueue(state).length;
@@ -112,8 +128,10 @@ export function GameHome({ user, initialSheet, initialMonumentId, justSubmitted 
   useEffect(() => {
     if (!map || !position || posKey === lastPos.current) return;
     lastPos.current = posKey;
+    // Far from every monument (e.g. real GPS at home): keep the play area in view.
+    if (!nearPlayArea) return;
     map.flyTo([position.latitude, position.longitude], Math.max(map.getZoom(), PLAYER_ZOOM - 1), { duration: 0.8 });
-  }, [map, posKey, position]);
+  }, [map, posKey, position, nearPlayArea]);
 
   // Opening a monument from a link (e.g. after submitting) centres on it.
   useEffect(() => {
@@ -128,7 +146,7 @@ export function GameHome({ user, initialSheet, initialMonumentId, justSubmitted 
     setSpin((s) => s + 1);
     if (!map) return;
     if (position) map.flyTo([position.latitude, position.longitude], PLAYER_ZOOM, { duration: 0.8 });
-    else map.flyTo([NYC_REGION.latitude, NYC_REGION.longitude], MIN_ZOOM, { duration: 0.8 });
+    else map.flyTo(playCenter, MIN_ZOOM, { duration: 0.8 });
   };
 
   const icons = useMemo(
@@ -145,8 +163,8 @@ export function GameHome({ user, initialSheet, initialMonumentId, justSubmitted 
     <div className="mc-home" data-testid="game-home">
       <div className="mc-map">
         <MapContainer
-          center={position ? [position.latitude, position.longitude] : [NYC_REGION.latitude, NYC_REGION.longitude]}
-          zoom={position ? PLAYER_ZOOM - 1 : MIN_ZOOM}
+          center={position && nearPlayArea ? [position.latitude, position.longitude] : playCenter}
+          zoom={position && nearPlayArea ? PLAYER_ZOOM - 1 : MIN_ZOOM}
           minZoom={MIN_ZOOM}
           maxZoom={MAX_ZOOM}
           zoomControl={false}
@@ -155,10 +173,9 @@ export function GameHome({ user, initialSheet, initialMonumentId, justSubmitted 
         >
           <MapBridge onMap={onMap} onZoom={setZoom} />
           <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-            subdomains="abcd"
+            url={BASEMAP.url}
             maxZoom={MAX_ZOOM}
-            attribution="&copy; OpenStreetMap &copy; CARTO"
+            attribution={BASEMAP.attribution}
             eventHandlers={{ tileload: () => setTileError(false), tileerror: () => setTileError(true) }}
           />
           {position && ringRadius ? (
@@ -193,9 +210,13 @@ export function GameHome({ user, initialSheet, initialMonumentId, justSubmitted 
         <div className="txt">
           {getAreaName(state, position)}
           <small>
-            {position
-              ? `${inRange.length} ${inRange.length === 1 ? "monument" : "monuments"} in range`
-              : "Location off · showing all monuments"}
+            {!position
+              ? "Location off · showing all monuments"
+              : inRange.length > 0
+                ? `${inRange.length} ${inRange.length === 1 ? "monument" : "monuments"} in range`
+                : nearest
+                  ? `0 in range · nearest ${nearest.monument.name}, ${formatKm(nearest.distanceMeters)}`
+                  : "0 monuments in range"}
           </small>
         </div>
       </div>
