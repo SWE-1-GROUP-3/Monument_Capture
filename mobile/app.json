@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Monument Capture",
+    "slug": "monument-capture",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "monumentcapture",
+    "userInterfaceStyle": "light",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Monument Capture to use your location for the monument map and capture verification."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.monumentcapture.app"
+    },
+    "android": {
+      "package": "com.monumentcapture.app"
+    }
+  }
+}
