@@ -8,6 +8,11 @@ export const theme = {
     surface: "#ffffff",
     text: "#17231c",
     warning: "#9a6512",
+    warningSoft: "#fbf1df",
+    danger: "#b42318",
+    dangerSoft: "#fdecea",
+    info: "#2563eb",
+    infoSoft: "#e8effd",
   },
   radius: {
     medium: 14,
