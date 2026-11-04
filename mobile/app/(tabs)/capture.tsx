@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Screen } from "../../src/components/Screen";
 import { theme } from "../../src/constants/theme";
@@ -12,20 +13,25 @@ const statusIcon = {
   eligible: "checkmark-circle-outline",
   outside: "walk-outline",
   inaccurate: "refresh-outline",
+  stale: "time-outline",
   "permission-denied": "lock-closed-outline",
   unavailable: "warning-outline",
 } as const;
 
 export default function CaptureScreen() {
   const { state, verify, reset } = useCaptureEligibility(captureMonument);
+  const [showPhotoStep, setShowPhotoStep] = useState(false);
   const isChecking = state.status === "checking";
   const isEligible = state.status === "eligible";
 
-  const continueToPhoto = () => {
-    Alert.alert(
-      "Location verified",
-      "You can proceed to the monument photo step. Camera capture will be implemented in US-06.",
-    );
+  const checkLocation = () => {
+    setShowPhotoStep(false);
+    void verify();
+  };
+
+  const resetFlow = () => {
+    setShowPhotoStep(false);
+    reset();
   };
 
   return (
@@ -62,7 +68,7 @@ export default function CaptureScreen() {
       <Pressable
         accessibilityRole="button"
         disabled={isChecking}
-        onPress={verify}
+        onPress={checkLocation}
         style={[styles.primaryButton, isChecking && styles.disabledButton]}
       >
         <Ionicons color="#ffffff" name="navigate" size={20} />
@@ -72,14 +78,27 @@ export default function CaptureScreen() {
       </Pressable>
 
       {isEligible ? (
-        <Pressable accessibilityRole="button" onPress={continueToPhoto} style={styles.continueButton}>
+        <Pressable accessibilityRole="button" onPress={() => setShowPhotoStep(true)} style={styles.continueButton}>
           <Ionicons color="#ffffff" name="camera" size={20} />
           <Text style={styles.primaryButtonText}>Continue to monument photo</Text>
         </Pressable>
       ) : null}
 
+      {showPhotoStep && isEligible ? (
+        <View style={styles.photoStepCard}>
+          <Ionicons color={theme.colors.primary} name="camera-outline" size={34} />
+          <Text style={styles.photoStepTitle}>Monument photo step</Text>
+          <Text style={styles.photoStepMessage}>
+            Your location is verified. Camera capture and photo submission will be connected in US-06.
+          </Text>
+          <Pressable accessibilityRole="button" onPress={() => setShowPhotoStep(false)} style={styles.backButton}>
+            <Text style={styles.resetButtonText}>Back to location verification</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       {state.status !== "idle" && !isChecking ? (
-        <Pressable accessibilityRole="button" onPress={reset} style={styles.resetButton}>
+        <Pressable accessibilityRole="button" onPress={resetFlow} style={styles.resetButton}>
           <Text style={styles.resetButtonText}>Reset location check</Text>
         </Pressable>
       ) : null}
@@ -104,6 +123,8 @@ function statusTitle(status: keyof typeof statusIcon) {
       return "Move closer";
     case "inaccurate":
       return "Location needs a retry";
+    case "stale":
+      return "Current location required";
     case "permission-denied":
       return "Location permission required";
     case "unavailable":
@@ -181,6 +202,27 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 16,
   },
+  photoStepCard: {
+    alignItems: "center",
+    backgroundColor: theme.colors.primarySoft,
+    borderColor: "#b9d9c6",
+    borderRadius: theme.radius.large,
+    borderWidth: 1,
+    padding: theme.spacing.large,
+  },
+  photoStepTitle: {
+    color: theme.colors.text,
+    fontSize: 20,
+    fontWeight: "800",
+    marginTop: theme.spacing.small,
+  },
+  photoStepMessage: {
+    color: theme.colors.muted,
+    lineHeight: 21,
+    marginTop: theme.spacing.small,
+    textAlign: "center",
+  },
+  backButton: { marginTop: theme.spacing.medium, padding: 8 },
   disabledButton: { opacity: 0.6 },
   primaryButtonText: { color: "#ffffff", fontSize: 16, fontWeight: "700" },
   resetButton: { alignItems: "center", padding: 10 },

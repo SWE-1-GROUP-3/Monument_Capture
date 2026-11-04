@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { captureMonument } from "../../data/captureMonument";
-import { evaluateCaptureProximity } from "./proximity";
+import { distanceInMeters, evaluateCaptureProximity, MAX_LOCATION_AGE_MS } from "./proximity";
+
+const NOW = 1_000_000;
 
 describe("capture proximity evaluation", () => {
   it("allows a player with an accurate location inside the capture radius", () => {
@@ -9,13 +11,15 @@ describe("capture proximity evaluation", () => {
       latitude: captureMonument.latitude,
       longitude: captureMonument.longitude,
       accuracyMeters: 10,
-    })).toEqual({ status: "eligible", distanceMeters: 0 });
+      timestampMs: NOW,
+    }, NOW)).toEqual({ status: "eligible", distanceMeters: 0 });
   });
 
   it("allows a player exactly on the configured radius boundary", () => {
     const result = evaluateCaptureProximity(
       { ...captureMonument, latitude: 0, longitude: 0, captureRadiusMeters: 100 },
-      { latitude: 0.000899, longitude: 0, accuracyMeters: 10 },
+      { latitude: 0.000899, longitude: 0, accuracyMeters: 10, timestampMs: NOW },
+      NOW,
     );
     expect(result.status).toBe("eligible");
   });
@@ -23,7 +27,8 @@ describe("capture proximity evaluation", () => {
   it("blocks a player outside the capture radius", () => {
     const result = evaluateCaptureProximity(
       { ...captureMonument, latitude: 0, longitude: 0, captureRadiusMeters: 100 },
-      { latitude: 0.002, longitude: 0, accuracyMeters: 10 },
+      { latitude: 0.002, longitude: 0, accuracyMeters: 10, timestampMs: NOW },
+      NOW,
     );
     expect(result.status).toBe("outside");
     if (result.status === "outside") {
@@ -39,7 +44,8 @@ describe("capture proximity evaluation", () => {
         latitude: captureMonument.latitude,
         longitude: captureMonument.longitude,
         accuracyMeters,
-      })).toEqual({ status: "inaccurate" });
+        timestampMs: NOW,
+      }, NOW)).toEqual({ status: "inaccurate" });
     },
   );
 
@@ -48,6 +54,30 @@ describe("capture proximity evaluation", () => {
       latitude: Number.NaN,
       longitude: captureMonument.longitude,
       accuracyMeters: 10,
-    })).toEqual({ status: "inaccurate" });
+      timestampMs: NOW,
+    }, NOW)).toEqual({ status: "inaccurate" });
+  });
+
+  it("rejects a fractional distance outside the radius before rounding for display", () => {
+    const monument = { ...captureMonument, latitude: 0, longitude: 0, captureRadiusMeters: 100 };
+    const position = { latitude: 0.000903, longitude: 0, accuracyMeters: 10, timestampMs: NOW };
+    expect(distanceInMeters(position, monument)).toBeGreaterThan(100);
+    expect(evaluateCaptureProximity(monument, position, NOW).status).toBe("outside");
+  });
+
+  it("rejects cached and future-dated locations", () => {
+    const basePosition = {
+      latitude: captureMonument.latitude,
+      longitude: captureMonument.longitude,
+      accuracyMeters: 10,
+    };
+    expect(evaluateCaptureProximity(captureMonument, {
+      ...basePosition,
+      timestampMs: NOW - MAX_LOCATION_AGE_MS - 1,
+    }, NOW)).toEqual({ status: "stale" });
+    expect(evaluateCaptureProximity(captureMonument, {
+      ...basePosition,
+      timestampMs: NOW + 1,
+    }, NOW)).toEqual({ status: "stale" });
   });
 });

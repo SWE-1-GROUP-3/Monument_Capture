@@ -3,7 +3,7 @@ import * as Location from "expo-location";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { captureMonument } from "../../data/captureMonument";
-import { useCaptureEligibility } from "./useCaptureEligibility";
+import { LOCATION_REQUEST_TIMEOUT_MS, useCaptureEligibility } from "./useCaptureEligibility";
 
 vi.mock("expo-location", () => ({
   requestForegroundPermissionsAsync: vi.fn(),
@@ -32,6 +32,7 @@ describe("capture eligibility location flow", () => {
     vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue(grantedPermission);
     vi.mocked(Location.getCurrentPositionAsync).mockResolvedValue({
       coords: { latitude: captureMonument.latitude, longitude: captureMonument.longitude, accuracy: 8 },
+      timestamp: Date.now(),
     } as Location.LocationObject);
     const { result } = renderHook(() => useCaptureEligibility(captureMonument));
 
@@ -45,6 +46,7 @@ describe("capture eligibility location flow", () => {
     vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue(grantedPermission);
     vi.mocked(Location.getCurrentPositionAsync).mockResolvedValue({
       coords: { latitude: 40.74, longitude: -74.01, accuracy: 10 },
+      timestamp: Date.now(),
     } as Location.LocationObject);
     const { result } = renderHook(() => useCaptureEligibility(captureMonument));
 
@@ -58,6 +60,7 @@ describe("capture eligibility location flow", () => {
     vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue(grantedPermission);
     vi.mocked(Location.getCurrentPositionAsync).mockResolvedValue({
       coords: { latitude: captureMonument.latitude, longitude: captureMonument.longitude, accuracy: 80 },
+      timestamp: Date.now(),
     } as Location.LocationObject);
     const { result } = renderHook(() => useCaptureEligibility(captureMonument));
 
@@ -76,5 +79,36 @@ describe("capture eligibility location flow", () => {
 
     expect(result.current.state.status).toBe("unavailable");
     expect(result.current.state.message).toContain("retry");
+  });
+
+  it("rejects a cached location even when its coordinates are inside the radius", async () => {
+    vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue(grantedPermission);
+    vi.mocked(Location.getCurrentPositionAsync).mockResolvedValue({
+      coords: { latitude: captureMonument.latitude, longitude: captureMonument.longitude, accuracy: 8 },
+      timestamp: Date.now() - 60_000,
+    } as Location.LocationObject);
+    const { result } = renderHook(() => useCaptureEligibility(captureMonument));
+
+    await act(() => result.current.verify());
+
+    expect(result.current.state.status).toBe("stale");
+    expect(result.current.state.message).toContain("too old");
+  });
+
+  it("times out a hanging location request and restores retry state", async () => {
+    vi.useFakeTimers();
+    vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue(grantedPermission);
+    vi.mocked(Location.getCurrentPositionAsync).mockImplementation(() => new Promise(() => {}));
+    const { result } = renderHook(() => useCaptureEligibility(captureMonument));
+
+    await act(async () => {
+      const verification = result.current.verify();
+      await vi.advanceTimersByTimeAsync(LOCATION_REQUEST_TIMEOUT_MS);
+      await verification;
+    });
+
+    expect(result.current.state.status).toBe("unavailable");
+    expect(result.current.state.message).toContain("timed out");
+    vi.useRealTimers();
   });
 });

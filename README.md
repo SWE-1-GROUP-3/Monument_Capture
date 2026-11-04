@@ -148,6 +148,7 @@ The prototype covers all agreed outcomes:
 - A player inside the radius can continue to the monument photo step.
 - A player outside the radius is told to move closer.
 - An inaccurate or unavailable location asks the player to retry.
+- A stale location or a request that exceeds 15 seconds is rejected and restores the retry controls.
 - Denied location permission prevents capture and explains that permission is required.
 
 `mobile/src/data/captureMonument.ts` provides the temporary selected monument until the discovery flow passes a real monument into Capture. US-06 will replace the photo-step placeholder with camera capture.

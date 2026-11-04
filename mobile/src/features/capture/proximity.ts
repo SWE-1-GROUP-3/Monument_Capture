@@ -1,6 +1,7 @@
 import type { CaptureMonument, PlayerPosition, ProximityEvaluation } from "./types";
 
 export const MAX_ACCEPTABLE_ACCURACY_METERS = 50;
+export const MAX_LOCATION_AGE_MS = 15_000;
 
 const EARTH_RADIUS_METERS = 6_371_000;
 
@@ -33,7 +34,17 @@ export function distanceInMeters(
 export function evaluateCaptureProximity(
   monument: CaptureMonument,
   position: PlayerPosition,
+  nowMs = Date.now(),
 ): ProximityEvaluation {
+  const locationAgeMs = nowMs - position.timestampMs;
+  const validTimestamp = Number.isFinite(position.timestampMs)
+    && locationAgeMs >= 0
+    && locationAgeMs <= MAX_LOCATION_AGE_MS;
+
+  if (!validTimestamp) {
+    return { status: "stale" };
+  }
+
   const validAccuracy = position.accuracyMeters !== null
     && Number.isFinite(position.accuracyMeters)
     && position.accuracyMeters > 0
@@ -49,14 +60,15 @@ export function evaluateCaptureProximity(
     return { status: "inaccurate" };
   }
 
-  const distanceMeters = Math.round(distanceInMeters(position, monument));
-  if (distanceMeters <= monument.captureRadiusMeters) {
-    return { status: "eligible", distanceMeters };
+  const preciseDistanceMeters = distanceInMeters(position, monument);
+  if (preciseDistanceMeters <= monument.captureRadiusMeters) {
+    return { status: "eligible", distanceMeters: Math.round(preciseDistanceMeters) };
   }
 
+  const distanceMeters = Math.ceil(preciseDistanceMeters);
   return {
     status: "outside",
     distanceMeters,
-    metersToMoveCloser: distanceMeters - monument.captureRadiusMeters,
+    metersToMoveCloser: Math.ceil(preciseDistanceMeters - monument.captureRadiusMeters),
   };
 }
