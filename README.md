@@ -80,14 +80,15 @@ npm run web -- --port 8082
 
 ### Demo script (about 3 minutes)
 
+The map is the home screen. Everything else opens as a bottom sheet from the bar at the bottom.
+
 1. Open http://localhost:8082 and log in as **Alex Rivera** (tap the shortcut, or `alex@demo.test` / `demo123`).
-2. **Map**: green = free, orange = held, purple = yours. Tap Bethesda Fountain to see who holds it and the lock countdown.
-3. Open **Washington Square Arch** → **Teleport here (demo)** → **Start Capture**.
-4. Try **Here, poor GPS** → **Check my location** to show the accuracy check rejecting you. Then **Teleport here** → **Check again** → **Start capture**.
-5. **Upload** any photo → **Submit for review**.
-6. **Profile → Switch account → Morgan Lee** (moderator). Open the **Queue**, open Alex's capture, pick a reason, **Approve**.
-7. Switch back to Alex: the arch is now **Yours** with a one-hour lock.
-8. **Profile → Demo tools → +1 hour**: the lock expires and the arch is free again.
+2. **Map**: blue pins are free, orange are held by someone else, purple are yours. Tap **Bethesda Fountain** to see who holds it and the lock countdown.
+3. Tap **Washington Square Arch** → **📍 Teleport here (demo)**. The capture ring and "1 monument in range" appear, and **📷 Capture** turns on.
+4. **📷 Capture** → upload or take a photo → **Submit for review** → **Back to map**. The sheet now says "✅ Submitted! Waiting for moderator review."
+5. **Profile** → switch account to **Morgan · Mod**. The bar becomes Profile | Queue | Monuments. Open **Queue**, open Alex's capture and **Approve** (no reason needed).
+6. Switch back to **Alex**: the arch is purple, its sheet says **Yours**, and **Records** shows the new hold ("Last held: Now").
+7. **Profile → Demo tools → +1 hour**: the lock expires and the arch is free again.
 
 **Profile → Demo tools → Reset demo data** restores the starting state.
 
@@ -136,6 +137,9 @@ An unknown email or wrong password shows "Invalid email or password."
 | `mobile/src/demo/store.ts` | The single store screens read from (`useDemoState`) and write through (`demo.*`) |
 | `mobile/src/demo/seed.ts` | 15 NYC monuments, 4 users, and a starting story (holds, an expired lock, a queue) |
 | `mobile/src/demo/location.ts` | Real GPS or the simulated position from Demo tools |
+| `mobile/src/demo/selectors.ts` | Read-only selectors for the map UI: level, records, badges, range, area name |
+| `mobile/src/game/` | Map-first home (`GameHome.web.tsx`) and its bottom sheets (`sheets.web.tsx`) |
+| `mobile/src/theme/` | Baloo 2 font and the game stylesheet for web |
 | `mobile/src/auth/AuthContext.tsx` | US-01 `useAuth()` (Iris), backed by the store's session |
 | `mobile/src/utils/monumentAvailability.ts` | US-03 available / locked / unknown status (Yuming) |
 | `mobile/app/monuments/[monumentId].tsx` | US-03 monument details with live lock countdown |

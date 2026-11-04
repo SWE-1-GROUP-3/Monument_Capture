@@ -30,7 +30,7 @@ export default function LoginScreen() {
     const success = await login(address, secret);
 
     if (success) {
-      router.replace("/(tabs)");
+      router.replace("/");
     } else {
       setError("Invalid email or password.");
     }
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: theme.colors.background,
     borderColor: theme.colors.border,
-    borderRadius: 10,
+    borderRadius: 14,
     borderWidth: 1,
     color: theme.colors.text,
     fontSize: 16,

@@ -13,7 +13,7 @@ type IconName = ComponentProps<typeof Ionicons>["name"];
 
 // ---------- Button ----------
 
-type ButtonVariant = "primary" | "secondary" | "danger" | "ghost";
+type ButtonVariant = "primary" | "secondary" | "danger" | "ghost" | "dark";
 
 export function Button({
   label,
@@ -39,26 +39,31 @@ export function Button({
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.button,
-        compact && styles.buttonCompact,
-        { backgroundColor: v.bg, borderColor: v.border },
-        pressed && !disabled && { opacity: 0.85 },
-        disabled && { opacity: 0.5 },
-        style,
-      ]}
+      style={({ pressed }) => {
+        const down = pressed && !disabled;
+        const edge = disabled ? theme.colors.disabledDark : v.edge;
+        return [
+          styles.button,
+          compact && styles.buttonCompact,
+          { backgroundColor: disabled ? theme.colors.disabled : v.bg, borderColor: disabled ? theme.colors.disabled : v.border },
+          // Chunky game button: a darker bottom edge that compresses on press.
+          { boxShadow: `0 ${down ? 2 : compact ? 3 : 4}px 0 ${edge}`, transform: [{ translateY: down ? 2 : 0 }] } as object,
+          style,
+        ];
+      }}
     >
       {icon ? <Ionicons color={v.fg} name={icon} size={compact ? 16 : 20} /> : null}
-      <Text style={[styles.buttonText, compact && styles.buttonTextCompact, { color: v.fg }]}>{label}</Text>
+      <Text style={[styles.buttonText, compact && styles.buttonTextCompact, { color: disabled && variant !== "ghost" ? "#ffffff" : v.fg }]}>{label}</Text>
     </Pressable>
   );
 }
 
-const buttonVariants: Record<ButtonVariant, { bg: string; fg: string; border: string }> = {
-  primary: { bg: theme.colors.primary, fg: "#ffffff", border: theme.colors.primary },
-  secondary: { bg: theme.colors.surface, fg: theme.colors.primary, border: theme.colors.primary },
-  danger: { bg: theme.colors.danger, fg: "#ffffff", border: theme.colors.danger },
-  ghost: { bg: "transparent", fg: theme.colors.muted, border: theme.colors.border },
+const buttonVariants: Record<ButtonVariant, { bg: string; fg: string; border: string; edge: string }> = {
+  primary: { bg: theme.colors.brand, fg: "#ffffff", border: theme.colors.brand, edge: theme.colors.brandDark },
+  secondary: { bg: theme.colors.card, fg: theme.colors.ink, border: theme.colors.line, edge: theme.colors.line },
+  danger: { bg: theme.colors.danger, fg: "#ffffff", border: theme.colors.danger, edge: "#a83232" },
+  ghost: { bg: theme.colors.card, fg: theme.colors.muted, border: theme.colors.line, edge: theme.colors.line },
+  dark: { bg: theme.colors.ink, fg: "#ffffff", border: theme.colors.ink, edge: theme.colors.inkDark },
 };
 
 // ---------- Card ----------
@@ -103,9 +108,9 @@ export function Banner({ tone = "info", title, children, icon }: { tone?: Tone; 
 export type HoldKind = "free" | "held" | "mine" | "inactive";
 
 const holdPill: Record<HoldKind, { label: string; bg: string; fg: string }> = {
-  free: { label: "Free", bg: theme.colors.primarySoft, fg: theme.colors.primary },
-  held: { label: "Held", bg: theme.colors.heldSoft, fg: theme.colors.held },
-  mine: { label: "Yours", bg: theme.colors.mineSoft, fg: theme.colors.mine },
+  free: { label: "Free to claim", bg: theme.colors.free, fg: "#ffffff" },
+  held: { label: "Held", bg: theme.colors.held, fg: "#ffffff" },
+  mine: { label: "Yours", bg: theme.colors.mine, fg: "#ffffff" },
   inactive: { label: "Inactive", bg: "#eef0ec", fg: theme.colors.muted },
 };
 
@@ -179,22 +184,22 @@ export function Chip({ label, selected, onPress }: { label: string; selected?: b
 const styles = StyleSheet.create({
   button: {
     alignItems: "center",
-    borderRadius: theme.radius.medium,
-    borderWidth: 1,
+    borderRadius: 16,
+    borderWidth: 2,
     flexDirection: "row",
     gap: theme.spacing.small,
     justifyContent: "center",
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
-  buttonCompact: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
-  buttonText: { fontSize: 16, fontWeight: "700" },
+  buttonCompact: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 12 },
+  buttonText: { fontSize: 17, fontWeight: "800" },
   buttonTextCompact: { fontSize: 14 },
   card: {
     backgroundColor: theme.colors.surface,
     borderColor: theme.colors.border,
-    borderRadius: theme.radius.medium,
-    borderWidth: 1,
+    borderRadius: theme.radius.large,
+    borderWidth: 2,
     gap: theme.spacing.small,
     padding: theme.spacing.medium,
   },
@@ -221,11 +226,11 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
     borderColor: theme.colors.border,
     borderRadius: 999,
-    borderWidth: 1,
+    borderWidth: 2,
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
-  chipSelected: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
-  chipText: { color: theme.colors.text, fontWeight: "600" },
+  chipSelected: { backgroundColor: theme.colors.ink, borderColor: theme.colors.ink },
+  chipText: { color: theme.colors.text, fontWeight: "700" },
   chipTextSelected: { color: "#ffffff" },
 });

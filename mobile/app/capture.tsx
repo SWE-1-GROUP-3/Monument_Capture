@@ -3,17 +3,18 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 
-import { Screen } from "../../src/components/Screen";
-import { Banner, Button, Card, Chip, DetailRow, Pill, SectionTitle } from "../../src/components/ui";
-import { theme } from "../../src/constants/theme";
-import { pickPhoto } from "../../src/demo/photo";
-import { CameraPanel } from "../../src/components/camera/CameraPanel";
-import { findMonument, getInProgressCapture } from "../../src/demo/rules";
-import { demo, useCurrentUser, useDemoState, useNow } from "../../src/demo/store";
-import type { CameraMode, Capture, Monument, SimulatedLocation, User } from "../../src/demo/types";
-import { monumentView, monumentViews } from "../../src/demo/views";
-import type { CaptureCheckState } from "../../src/features/capture/types";
-import { useCaptureEligibility } from "../../src/features/capture/useCaptureEligibility";
+import { Screen } from "../src/components/Screen";
+import { Banner, Button, Card, Chip, DetailRow, Pill, SectionTitle } from "../src/components/ui";
+import { theme } from "../src/constants/theme";
+import { pickPhoto } from "../src/demo/photo";
+import { CameraPanel } from "../src/components/camera/CameraPanel";
+import { returnToMap } from "../src/game/homeIntent";
+import { findMonument, getInProgressCapture } from "../src/demo/rules";
+import { demo, useCurrentUser, useDemoState, useNow } from "../src/demo/store";
+import type { CameraMode, Capture, Monument, SimulatedLocation, User } from "../src/demo/types";
+import { monumentView, monumentViews } from "../src/demo/views";
+import type { CaptureCheckState } from "../src/features/capture/types";
+import { useCaptureEligibility } from "../src/features/capture/useCaptureEligibility";
 
 const statusIcon = {
   idle: "location-outline",
@@ -32,7 +33,7 @@ export default function CaptureScreen() {
   const user = useCurrentUser();
   const state = useDemoState();
   const { monumentId } = useLocalSearchParams<{ monumentId?: string }>();
-  const [submitted, setSubmitted] = useState<{ monumentName: string } | null>(null);
+  const [submitted, setSubmitted] = useState<{ monumentName: string; monumentId: string } | null>(null);
 
   if (!user) return null;
   if (user.role !== "player") {
@@ -50,6 +51,7 @@ export default function CaptureScreen() {
     return (
       <SubmittedStep
         monumentName={submitted.monumentName}
+        monumentId={submitted.monumentId}
         onAnother={() => {
           setSubmitted(null);
           router.setParams({ monumentId: "" });
@@ -62,7 +64,7 @@ export default function CaptureScreen() {
       <PhotoStep
         capture={inProgress}
         monument={inProgressMonument}
-        onSubmitted={() => setSubmitted({ monumentName: inProgressMonument.name })}
+        onSubmitted={() => setSubmitted({ monumentName: inProgressMonument.name, monumentId: inProgressMonument.id })}
       />
     );
   }
@@ -78,7 +80,7 @@ function PickStep({ user }: { user: User }) {
   const now = useNow(5000);
   const views = monumentViews(state, user.id, now).sort((a, b) => order[a.kind] - order[b.kind]);
   return (
-    <Screen title="Start a capture" subtitle="Pick the monument you are standing at. Held monuments can't be captured until their lock runs out.">
+    <Screen title="Start a capture" subtitle="Pick the monument you are standing at. Held monuments can't be captured until their lock runs out." back backTo="/" backLabel="Map">
       {views.map((v) => (
         <Card
           key={v.monument.id}
@@ -131,7 +133,7 @@ function CheckStep({ monument, user }: { monument: Monument; user: User }) {
   };
 
   return (
-    <Screen title="Check in" subtitle="We confirm you're within the monument's capture radius before you take the photo." back backTo="/capture">
+    <Screen title="Check in" subtitle="We confirm you're within the monument's capture radius before you take the photo." back backTo="/" backLabel="Map">
       <Card style={styles.monumentCard}>
         <View style={styles.monumentIcon}>
           <Ionicons color={theme.colors.primary} name="location" size={26} />
@@ -269,7 +271,7 @@ function PhotoStep({ capture, monument, onSubmitted }: { capture: Capture; monum
 
       {error ? <Banner tone="danger" title="Couldn't use that photo">{error}</Banner> : null}
       <Button label="Submit for review" icon="send" onPress={submit} disabled={!photo || busy} />
-      <Button label="Cancel capture" variant="ghost" onPress={() => demo.cancelCapture(capture.id)} />
+      <Button label="Cancel capture" variant="ghost" onPress={() => { demo.cancelCapture(capture.id); returnToMap({ monumentId: monument.id }); }} />
 
       <Card style={styles.demoCard}>
         <Text style={styles.demoLabel}>DEMO CAMERA</Text>
@@ -299,14 +301,15 @@ const cameraSummary: Record<CameraMode, string> = {
 
 // ---------- Step 4: done ----------
 
-function SubmittedStep({ monumentName, onAnother }: { monumentName: string; onAnother: () => void }) {
+function SubmittedStep({ monumentName, monumentId, onAnother }: { monumentName: string; monumentId: string; onAnother: () => void }) {
   return (
     <Screen title="Sent for review">
       <Banner tone="success" title={`${monumentName} is in the queue`}>
         A moderator will check your photo. If it's approved, the monument is locked to you for one hour.
       </Banner>
       <SectionTitle>What next?</SectionTitle>
-      <Button label="See my activity" icon="time" onPress={() => router.replace("/activity")} />
+      <Button label="Back to map" icon="map" onPress={() => returnToMap({ monumentId, submitted: true })} />
+      <Button label="See my activity" icon="time" variant="secondary" onPress={() => returnToMap({ sheet: "activity" })} />
       <Button label="Capture another" icon="camera" variant="secondary" onPress={onAnother} />
     </Screen>
   );

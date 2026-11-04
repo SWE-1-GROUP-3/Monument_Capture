@@ -7,6 +7,7 @@ import { Screen } from "../../src/components/Screen";
 import { MonumentMap } from "../../src/components/map/MonumentMap";
 import { Banner, Button, Card } from "../../src/components/ui";
 import { theme } from "../../src/constants/theme";
+import { returnToMap } from "../../src/game/homeIntent";
 import { findMonument, validateMonument } from "../../src/demo/rules";
 import { demo, getDemoState } from "../../src/demo/store";
 
@@ -51,7 +52,7 @@ export default function EditMonumentScreen() {
   const save = () => {
     try {
       const saved = demo.saveMonument(input);
-      router.replace(`/monuments/${saved.id}`);
+      returnToMap({ monumentId: saved.id });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save.");
     }
@@ -61,11 +62,11 @@ export default function EditMonumentScreen() {
     <RequireUser role="moderator">
       {() =>
         !isNew && !findMonument(getDemoState(), id) ? (
-          <Screen title="Monument not found" back backTo="/manage">
+          <Screen title="Monument not found" back backTo="/?sheet=monuments" backLabel="Monuments">
             <Banner tone="warning">This monument does not exist.</Banner>
           </Screen>
         ) : (
-          <Screen title={isNew ? "Add monument" : "Edit monument"} back backTo="/manage">
+          <Screen title={isNew ? "Add monument" : "Edit monument"} back backTo="/?sheet=monuments" backLabel="Monuments">
             <Card>
               <Field label="Name" value={form.name} onChange={set("name")} placeholder="e.g. Alexander Hamilton Statue" />
               <Field label="Neighborhood" value={form.neighborhood} onChange={set("neighborhood")} placeholder="e.g. Central Park" />
@@ -146,7 +147,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: theme.colors.background,
     borderColor: theme.colors.border,
-    borderRadius: 10,
+    borderRadius: 14,
     borderWidth: 1,
     color: theme.colors.text,
     fontSize: 16,

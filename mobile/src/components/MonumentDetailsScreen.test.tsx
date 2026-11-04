@@ -136,10 +136,10 @@ it("returns through history when available", () => {
   expect(route.replace).not.toHaveBeenCalled();
 });
 
-it("falls back to Explore for a direct link with no navigation history", () => {
+it("falls back to the map for a direct link with no navigation history", () => {
   route.canGoBack.mockReturnValue(false);
   render(<BackToMapButton />);
   fireEvent.click(screen.getByRole("button", { name: "Back to map" }));
-  expect(route.replace).toHaveBeenCalledExactlyOnceWith("/(tabs)/explore");
+  expect(route.replace).toHaveBeenCalledExactlyOnceWith("/");
   expect(route.back).not.toHaveBeenCalled();
 });

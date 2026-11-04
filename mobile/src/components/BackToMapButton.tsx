@@ -6,7 +6,7 @@ export function BackToMapButton() {
   return (
     <Pressable accessibilityRole="button" onPress={() => {
       if (router.canGoBack()) router.back();
-      else router.replace("/(tabs)/explore");
+      else router.replace("/");
     }} style={styles.button}>
       <Text style={styles.text}>Back to map</Text>
     </Pressable>

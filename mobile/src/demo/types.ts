@@ -9,6 +9,8 @@ export type User = {
   name: string;
   email: string;
   role: Role;
+  /** When the account was created (seed data); shown on the profile. */
+  joinedAt?: number;
 };
 
 export type Monument = {
@@ -19,6 +21,8 @@ export type Monument = {
   latitude: number;
   longitude: number;
   captureRadiusMeters: number;
+  /** Emoji shown on the map pin and in lists. */
+  icon?: string;
   /** Moderators deactivate rather than delete, so capture history stays intact. */
   active: boolean;
 };

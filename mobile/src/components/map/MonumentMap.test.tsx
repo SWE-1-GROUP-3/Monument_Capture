@@ -75,14 +75,14 @@ it("colors available, locked, expired, and unknown dots without permanent labels
   expect(screen.queryByText("Locked")).toBeNull();
   expect(screen.queryByText("Status unknown")).toBeNull();
   expect(screen.getByRole("button", { name: "Locked monument: Locked" })).toBeTruthy();
-  expect(screen.getByTitle("Locked monument: Locked").innerHTML).toContain("#9a6512");
-  expect(screen.getByTitle("Available monument: Available").innerHTML).toContain("#176b47");
-  expect(screen.getByTitle("Unknown monument: Status unknown").innerHTML).toContain("#66756a");
+  expect(screen.getByTitle("Locked monument: Locked").innerHTML).toContain("#e8590c");
+  expect(screen.getByTitle("Available monument: Available").innerHTML).toContain("#2f80ed");
+  expect(screen.getByTitle("Unknown monument: Status unknown").innerHTML).toContain("#5d7780");
   fireEvent.click(screen.getByTitle("Locked monument: Locked"));
   expect(container.querySelector(".leaflet-popup-content")?.textContent).toBe("Locked monumentLockedView details →");
   rerender(<MonumentMap onViewDetails={() => {}} monuments={monuments} playerLocation={null} nowMs={expires} />);
   expect(container.querySelector(".leaflet-popup-content")?.textContent).toBe("Locked monumentAvailable to captureView details →Start Capture");
-  expect(screen.getByTitle("Locked monument: Available").innerHTML).toContain("#176b47");
+  expect(screen.getByTitle("Locked monument: Available").innerHTML).toContain("#2f80ed");
   fireEvent.click(screen.getByTitle("Unknown monument: Status unknown"));
   expect(container.querySelector(".leaflet-popup-content")?.textContent).toBe("Unknown monumentStatus unknownView details →");
   expect(container.textContent).not.toContain("Demo Player");

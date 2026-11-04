@@ -72,16 +72,16 @@ it("uses standard colored pins with accessible status and a card, updating at ex
   ];
   const { rerender } = render(<MonumentMap onViewDetails={() => {}} monuments={monuments} playerLocation={null} nowMs={expires - 1} />);
 
-  expect(screen.getByTitle("Available monument").getAttribute("data-pin-color")).toBe("#176b47");
-  expect(screen.getByTitle("Locked monument").getAttribute("data-pin-color")).toBe("#9a6512");
-  expect(screen.getByTitle("Unknown monument").getAttribute("data-pin-color")).toBe("#66756a");
+  expect(screen.getByTitle("Available monument").getAttribute("data-pin-color")).toBe("#2f80ed");
+  expect(screen.getByTitle("Locked monument").getAttribute("data-pin-color")).toBe("#e8590c");
+  expect(screen.getByTitle("Unknown monument").getAttribute("data-pin-color")).toBe("#5d7780");
   expect(screen.getByLabelText("Locked monument: Locked")).toBeTruthy();
   fireEvent.click(screen.getByLabelText("Locked monument: Locked"));
   expect(screen.getByText("Locked")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Start Capture" })).toBeNull();
   rerender(<MonumentMap onViewDetails={() => {}} monuments={monuments} playerLocation={null} nowMs={expires} />);
   expect(screen.getByLabelText("Locked monument: Available")).toBeTruthy();
-  expect(screen.getByTitle("Locked monument").getAttribute("data-pin-color")).toBe("#176b47");
+  expect(screen.getByTitle("Locked monument").getAttribute("data-pin-color")).toBe("#2f80ed");
   expect(screen.getByText("Available to capture")).toBeTruthy();
   expect(screen.getByRole("button", { name: "Start Capture" }).getAttribute("aria-disabled")).toBe("true");
 });

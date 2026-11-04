@@ -6,6 +6,7 @@ import { RequireUser } from "../../src/components/RequireUser";
 import { Screen } from "../../src/components/Screen";
 import { Banner, Button, Card, Chip, DetailRow, Pill, SectionTitle } from "../../src/components/ui";
 import { theme } from "../../src/constants/theme";
+import { returnToMap } from "../../src/game/homeIntent";
 import {
   findCapture,
   findMonument,
@@ -45,7 +46,7 @@ export default function ReviewScreen() {
         const player = capture ? findUser(state, capture.playerId) : undefined;
         if (!capture || !monument) {
           return (
-            <Screen title="Capture not found" back backTo="/queue">
+            <Screen title="Capture not found" back backTo="/?sheet=queue" backLabel="Queue">
               <Banner tone="warning">This capture no longer exists.</Banner>
             </Screen>
           );
@@ -62,14 +63,15 @@ export default function ReviewScreen() {
             setReason("");
             // Read the store directly: the hook value is from before this write.
             const next = getPendingQueue(getDemoState()).find((q) => q.capture.id !== capture.id);
-            router.replace(next ? `/review/${next.capture.id}` : "/queue");
+            if (next) router.replace(`/review/${next.capture.id}`);
+            else returnToMap({ sheet: "queue" });
           } catch (e) {
             setError(e instanceof Error ? e.message : "Could not save the decision.");
           }
         };
 
         return (
-          <Screen title={monument.name} subtitle={`Submitted by ${player?.name ?? "unknown player"}`} back backTo="/queue">
+          <Screen title={monument.name} subtitle={`Submitted by ${player?.name ?? "unknown player"}`} back backTo="/?sheet=queue" backLabel="Queue">
             <Image source={{ uri: capture.photoUri }} style={styles.photo} resizeMode="contain" accessibilityLabel="Submitted photo" />
 
             <Card>
@@ -127,7 +129,7 @@ export default function ReviewScreen() {
               </>
             )}
 
-            <Card style={styles.row} onPress={() => router.push(`/monuments/${monument.id}`)}>
+            <Card style={styles.row} onPress={() => returnToMap({ monumentId: monument.id })}>
               <Text style={styles.linkText}>View monument</Text>
               <Pill kind={hold.status === "held" ? "held" : "free"} />
             </Card>
@@ -144,7 +146,7 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: theme.colors.surface,
     borderColor: theme.colors.border,
-    borderRadius: 10,
+    borderRadius: 14,
     borderWidth: 1,
     color: theme.colors.text,
     fontSize: 16,

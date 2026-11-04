@@ -1,12 +1,16 @@
 import { LOCK_DURATION_MS } from "./rules";
 import type { Capture, CaptureReview, DemoState, Monument, User } from "./types";
 
-export const SEED_VERSION = 3;
+export const SEED_VERSION = 4;
 
 /** Mock password for every demo account (US-01 mock login). Replace with real auth later. */
 export const DEMO_PASSWORD = "demo123";
 
 const MINUTE = 60_000;
+const DAY_MIN = 24 * 60;
+
+/** Roughly when each demo account joined, in days before "now" at seed time. */
+const JOINED_DAYS_AGO: Record<string, number> = { "u-alex": 34, "u-sam": 30, "u-priya": 21, "u-morgan": 40, "u-demo": 2 };
 
 export const seedUsers: User[] = [
   { id: "u-alex", name: "Alex Rivera", email: "alex@demo.test", role: "player" },
@@ -16,6 +20,12 @@ export const seedUsers: User[] = [
   // Iris's original US-01 mock account.
   { id: "u-demo", name: "Demo Player", email: "demo@example.com", role: "player" },
 ];
+
+const ICONS: Record<string, string> = {
+  liberty: "🗽", "washington-arch": "🏛️", "soldiers-sailors": "🎖️", "brooklyn-war": "🕊️", grant: "⚱️",
+  bethesda: "⛲", obelisk: "🏺", columbus: "🧭", "flatiron-worth": "⚔️", "charging-bull": "🐂",
+  "federal-hall": "🎩", alice: "🐇", imagine: "☮️", "prison-ship": "⚓", farragut: "⛵",
+};
 
 // Fifteen hand-entered NYC monuments: the MVP's single seeded play area.
 // IDs match the existing US-02 map data where the monument already existed.
@@ -37,6 +47,7 @@ export const seedMonuments: Monument[] = [
   m("farragut", "Admiral Farragut Monument", "Madison Square", 40.7426, -73.9878, 60, "Saint-Gaudens bronze in Madison Square Park."),
 ];
 
+
 function m(
   id: string,
   name: string,
@@ -46,7 +57,7 @@ function m(
   captureRadiusMeters: number,
   description: string,
 ): Monument {
-  return { id, name, neighborhood, description, latitude, longitude, captureRadiusMeters, active: true };
+  return { id, name, neighborhood, description, latitude, longitude, captureRadiusMeters, icon: ICONS[id] ?? "📍", active: true };
 }
 
 /** A generated placeholder image so seeded captures have something to review. */
@@ -126,9 +137,20 @@ export function createSeedState(now: number): DemoState {
   add("columbus", "u-sam", 5);
   add("brooklyn-war", "u-alex", 2);
 
+  // Older history, so Records has something to show (all locks long expired).
+  add("charging-bull", "u-alex", 6 * DAY_MIN + 10, { decision: "approved", reviewedMinutesAgo: 6 * DAY_MIN, reason: "" });
+  add("charging-bull", "u-alex", 5 * DAY_MIN + 10, { decision: "rejected", reviewedMinutesAgo: 5 * DAY_MIN, reason: "Too blurry to verify." });
+  add("liberty", "u-alex", 4 * DAY_MIN + 10, { decision: "approved", reviewedMinutesAgo: 4 * DAY_MIN, reason: "" });
+  add("liberty", "u-alex", 2 * DAY_MIN + 10, { decision: "approved", reviewedMinutesAgo: 2 * DAY_MIN, reason: "" });
+  add("alice", "u-alex", 3 * DAY_MIN + 10, { decision: "approved", reviewedMinutesAgo: 3 * DAY_MIN, reason: "" });
+  add("alice", "u-alex", 3 * DAY_MIN - 55, { decision: "approved", reviewedMinutesAgo: 3 * DAY_MIN - 65, reason: "" });
+  add("alice", "u-sam", 3 * DAY_MIN - 140, { decision: "approved", reviewedMinutesAgo: 3 * DAY_MIN - 150, reason: "" });
+  add("washington-arch", "u-alex", DAY_MIN + 10, { decision: "approved", reviewedMinutesAgo: DAY_MIN, reason: "" });
+  add("bethesda", "u-priya", 2 * DAY_MIN + 10, { decision: "approved", reviewedMinutesAgo: 2 * DAY_MIN, reason: "" });
+
   return {
     version: SEED_VERSION,
-    users: seedUsers.map((u) => ({ ...u })),
+    users: seedUsers.map((u) => ({ ...u, joinedAt: now - (JOINED_DAYS_AGO[u.id] ?? 1) * DAY_MIN * MINUTE })),
     monuments: seedMonuments.map((x) => ({ ...x })),
     captures,
     reviews,
