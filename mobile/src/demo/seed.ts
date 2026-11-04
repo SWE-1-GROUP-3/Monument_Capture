@@ -1,7 +1,7 @@
 import { LOCK_DURATION_MS } from "./rules";
 import type { Capture, CaptureReview, DemoState, Monument, User } from "./types";
 
-export const SEED_VERSION = 4;
+export const SEED_VERSION = 5;
 
 /** Mock password for every demo account (US-01 mock login). Replace with real auth later. */
 export const DEMO_PASSWORD = "demo123";
@@ -25,9 +25,10 @@ const ICONS: Record<string, string> = {
   liberty: "🗽", "washington-arch": "🏛️", "soldiers-sailors": "🎖️", "brooklyn-war": "🕊️", grant: "⚱️",
   bethesda: "⛲", obelisk: "🏺", columbus: "🧭", "flatiron-worth": "⚔️", "charging-bull": "🐂",
   "federal-hall": "🎩", alice: "🐇", imagine: "☮️", "prison-ship": "⚓", farragut: "⛵",
+  "6mtc-class": "🎓",
 };
 
-// Fifteen hand-entered NYC monuments: the MVP's single seeded play area.
+// Sixteen hand-entered NYC monuments: the MVP's single seeded play area.
 // IDs match the existing US-02 map data where the monument already existed.
 export const seedMonuments: Monument[] = [
   m("liberty", "Statue of Liberty", "Liberty Island", 40.6892, -74.0445, 150, "Copper colossus in New York Harbor, dedicated 1886."),
@@ -45,6 +46,7 @@ export const seedMonuments: Monument[] = [
   m("imagine", "Strawberry Fields 'Imagine' Mosaic", "Central Park", 40.7757, -73.975, 60, "Memorial mosaic near the Dakota."),
   m("prison-ship", "Prison Ship Martyrs' Monument", "Fort Greene", 40.6915, -73.9755, 100, "Doric column honouring Revolutionary War prisoners."),
   m("farragut", "Admiral Farragut Monument", "Madison Square", 40.7426, -73.9878, 60, "Saint-Gaudens bronze in Madison Square Park."),
+  m("6mtc-class", "6MTC Class", "Downtown Brooklyn", 40.69456, -73.98684, 100, "CS-GY 6063 Software Engineering I class at 6 MetroTech Center."),
 ];
 
 

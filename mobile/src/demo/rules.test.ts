@@ -13,7 +13,7 @@ import {
   startCapture,
   submitCapturePhoto,
 } from "./rules";
-import { createSeedState } from "./seed";
+import { createSeedState, seedMonuments } from "./seed";
 
 const NOW = Date.UTC(2026, 10, 3, 17, 0, 0);
 const ARCH = { latitude: 40.7312, longitude: -73.9971 };
@@ -158,7 +158,7 @@ describe("monument management", () => {
   it("adds and edits monuments with validation", () => {
     const base = { name: "Test Statue", neighborhood: "Midtown", description: "", latitude: 40.75, longitude: -73.98, captureRadiusMeters: 50 };
     const added = saveMonument(createSeedState(NOW), base);
-    expect(added.state.monuments).toHaveLength(16);
+    expect(added.state.monuments).toHaveLength(seedMonuments.length + 1);
     const edited = saveMonument(added.state, { ...base, id: added.monument.id, name: "Renamed" });
     expect(edited.state.monuments.find((x) => x.id === added.monument.id)?.name).toBe("Renamed");
     expect(() => saveMonument(added.state, { ...base, latitude: 120 })).toThrow("Latitude");
