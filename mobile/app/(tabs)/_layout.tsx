@@ -4,6 +4,8 @@ import type { ComponentProps } from "react";
 import type { ColorValue } from "react-native";
 
 import { theme } from "../../src/constants/theme";
+import { getPendingQueue } from "../../src/review/captureReview";
+import { useCurrentUser, useReviewState } from "../../src/review/reviewStore";
 
 type IconName = ComponentProps<typeof Ionicons>["name"];
 
@@ -15,6 +17,9 @@ function tabIcon(name: IconName) {
 }
 
 export default function TabLayout() {
+  const user = useCurrentUser();
+  const pendingCount = getPendingQueue(useReviewState()).length;
+  const isModerator = user?.role === "moderator";
   return (
     <Tabs
       screenOptions={{
@@ -40,6 +45,19 @@ export default function TabLayout() {
       <Tabs.Screen
         name="capture"
         options={{ title: "Capture", tabBarIcon: tabIcon("camera-outline") }}
+      />
+      <Tabs.Screen
+        name="captures"
+        options={{ title: "My captures", tabBarIcon: tabIcon("time-outline"), href: isModerator ? null : undefined }}
+      />
+      <Tabs.Screen
+        name="queue"
+        options={{
+          title: "Queue",
+          tabBarIcon: tabIcon("checkmark-done-outline"),
+          tabBarBadge: isModerator && pendingCount > 0 ? pendingCount : undefined,
+          href: isModerator ? undefined : null,
+        }}
       />
       <Tabs.Screen
         name="profile"

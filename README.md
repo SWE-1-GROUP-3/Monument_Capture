@@ -138,3 +138,24 @@ still needs device validation. Tests do not download map tiles.
 Future backend work: load monuments and available play areas from Spring Boot,
 handle API loading/errors, and enforce authenticated Player access server-side.
 No capture, locking, moderation, or login behavior is added by US-02.
+
+## US-09 to US-14: Capture review flow (Aayush)
+
+Hardcoded frontend prototype of what happens after a capture is submitted.
+
+| Story | Where |
+| --- | --- |
+| US-09 Pending Review | **My captures** tab: new submissions show *Pending Review* until a moderator decides. A failed submission shows "Your submission was not received" and creates no record. |
+| US-10 Approved | Approved captures show *Approved* and stay in the player's list. |
+| US-11 Rejected + reason | Rejected captures show *Rejected* and the moderator's reason. |
+| US-13 Moderation queue | **Queue** tab (moderators only): pending captures oldest first with photo, player, reported distance and submission time. Players can't open it. |
+| US-14 Approve / reject | Review screen: approve (reason optional) or reject (reason required). Players see no approve/reject options. |
+
+Code: `mobile/src/review/` (types, mock data, rules, store) and the screens `app/(tabs)/captures.tsx`, `app/(tabs)/queue.tsx`, `app/review/[id].tsx`. Tests: `mobile/src/review/*.test.ts(x)`.
+
+**Stand-ins until other stories merge** (clearly labelled in the app):
+- **Profile → Switch user** replaces login (US-01) so you can act as a player (Alex, Sam) or moderator (Morgan).
+- **My captures → Submit a test capture / Simulate a failed submission** replaces the capture flow (US-05 to US-08).
+- The challenge photo and target (US-07, US-08) are noted as not yet available in the queue and review screen.
+
+Try it: `cd mobile && npm install && npm run web -- --port 8082`, open http://localhost:8082/captures, submit a test capture, switch to Morgan in Profile, then approve or reject it from the Queue.
