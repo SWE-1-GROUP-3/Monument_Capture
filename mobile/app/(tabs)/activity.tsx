@@ -53,7 +53,7 @@ export default function ActivityScreen() {
                 Submitted {formatTimeAgo(now - (capture.submittedAt ?? capture.startedAt))} · {capture.distanceMeters} m away
               </Text>
               <Pill kind={{ capture: capture.status }} />
-              {review ? (
+              {review?.reason ? (
                 <Text style={[styles.reason, review.decision === "rejected" && { color: theme.colors.danger }]}>
                   Moderator: “{review.reason}”
                 </Text>

@@ -233,8 +233,11 @@ export function reviewCapture(
   if (!capture) throw new RuleError("Capture not found.");
   if (capture.status !== "pending") throw new RuleError("This capture has already been reviewed.");
 
+  // US-14: a rejection must carry a reason the player can act on; approval needs none.
   const reason = input.reason.trim();
-  if (reason.length < MIN_REASON_LENGTH) throw new RuleError("Enter a reason for your decision.");
+  if (input.decision === "rejected" && reason.length < MIN_REASON_LENGTH) {
+    throw new RuleError("A reason is required to reject a capture.");
+  }
 
   if (input.decision === "approved") {
     const hold = getHold(state, capture.monumentId, now);

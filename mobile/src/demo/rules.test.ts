@@ -122,7 +122,14 @@ describe("moderation", () => {
     expect(getHold(approvedOnce, "washington-arch", NOW)).toMatchObject({ holder: { id: "u-priya" } });
   });
 
-  it("only lets moderators review, only once, and only with a reason", () => {
+  it("lets a moderator approve without a reason (US-14)", () => {
+    const { state, captureId } = capturedAndPending();
+    const approved = reviewCapture(state, { captureId, moderatorId: "u-morgan", decision: "approved", reason: "" }, NOW);
+    expect(approved.reviews.at(-1)).toMatchObject({ decision: "approved", reason: "" });
+    expect(getHold(approved, "washington-arch", NOW)).toMatchObject({ holder: { id: "u-priya" } });
+  });
+
+  it("only lets moderators review, only once, and only rejects with a reason", () => {
     const { state, captureId } = capturedAndPending();
     expect(() => reviewCapture(state, { captureId, moderatorId: "u-alex", decision: "approved", reason: "fine" }, NOW)).toThrow("moderators");
     expect(() => reviewCapture(state, { captureId, moderatorId: "u-morgan", decision: "rejected", reason: "  " }, NOW)).toThrow("reason");

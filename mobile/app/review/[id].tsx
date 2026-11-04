@@ -86,7 +86,7 @@ export default function ReviewScreen() {
 
             {review ? (
               <Banner tone={review.decision === "approved" ? "success" : "danger"} title={review.decision === "approved" ? "Approved" : "Rejected"}>
-                {`“${review.reason}” · ${formatTimeAgo(now - review.reviewedAt)} by ${findUser(state, review.moderatorId)?.name ?? "a moderator"}`}
+                {`${review.reason ? `“${review.reason}” · ` : ""}${formatTimeAgo(now - review.reviewedAt)} by ${findUser(state, review.moderatorId)?.name ?? "a moderator"}`}
               </Banner>
             ) : (
               <>
@@ -99,7 +99,7 @@ export default function ReviewScreen() {
                 )}
 
                 <SectionTitle>Decision</SectionTitle>
-                <Text style={styles.label}>Reason (recorded and shown to the player)</Text>
+                <Text style={styles.label}>Reason: required to reject, optional to approve (shown to the player)</Text>
                 <TextInput
                   accessibilityLabel="Reason"
                   multiline
@@ -107,7 +107,7 @@ export default function ReviewScreen() {
                     setReason(t);
                     setError(null);
                   }}
-                  placeholder="Why are you approving or rejecting this?"
+                  placeholder="Why are you rejecting this? (optional when approving)"
                   placeholderTextColor={theme.colors.muted}
                   style={styles.input}
                   value={reason}

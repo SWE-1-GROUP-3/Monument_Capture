@@ -110,7 +110,7 @@ Every error can be triggered on cue. The capture screens have a dashed **Demo** 
 | No camera | Photo step → **No camera** | "No camera found" + upload instead |
 | Camera in use | Photo step → **Camera in use** | "Camera is in use" |
 | Not a photo | **Upload a photo instead** → pick a .txt or .pdf | "That file isn't a photo." |
-| Approve without a reason | Moderator review → Approve with an empty reason | "Enter a reason for your decision." |
+| Reject without a reason (US-14) | Moderator review → Reject with an empty reason | "A reason is required to reject a capture." (Approving needs no reason.) |
 | Approve when already held (one-holder rule) | As Morgan, open Priya's **Bethesda Fountain** capture → Approve | "This monument is already held by Sam Chen … Reject this capture instead." |
 | Bad monument data | Monuments → Add → latitude `123` | "Latitude must be between -90 and 90." |
 
