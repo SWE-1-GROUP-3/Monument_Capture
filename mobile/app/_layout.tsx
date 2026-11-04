@@ -4,7 +4,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 
 import { AuthProvider, useAuth } from "../src/auth/AuthContext";
-import BackToMapButton from "../src/components/BackToMapButton";
+import { BackToMapButton } from "../src/components/BackToMapButton";
 import { theme } from "../src/constants/theme";
 
 function AuthGuard() {
