@@ -1,7 +1,12 @@
-import { useState } from "react";
-import { divIcon } from "leaflet";
+import { useEffect, useRef, useState } from "react";
+import { divIcon, type Marker as LeafletMarker } from "leaflet";
+import type { MapMonument } from "../../types/mapMonument";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+
+import { MonumentActions } from "./MonumentActions";
+import { getMonumentAvailability } from "../../utils/monumentAvailability";
+import { availabilityAppearance } from "./availabilityAppearance";
 
 import { getValidMonuments, isValidCoordinate } from "../../utils/mapData";
 
@@ -17,10 +22,14 @@ function pin(color: string) {
     popupAnchor: [0, -14],
   });
 }
-const monumentIcon = pin("#176b47");
+const monumentIcons = {
+  available: pin(availabilityAppearance.available.color),
+  locked: pin(availabilityAppearance.locked.color),
+  unknown: pin(availabilityAppearance.unknown.color),
+};
 const playerIcon = pin("#2563eb");
 
-export function MonumentMap({ monuments, playerLocation }: MonumentMapProps) {
+export function MonumentMap({ monuments, playerLocation, nowMs, onViewDetails }: MonumentMapProps) {
   const [tileError, setTileError] = useState(false);
   return (
     <div>
@@ -36,9 +45,7 @@ export function MonumentMap({ monuments, playerLocation }: MonumentMapProps) {
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {getValidMonuments(monuments).map((monument) => (
-          <Marker key={monument.id} position={[monument.latitude, monument.longitude]} icon={monumentIcon} title={monument.name}>
-            <Popup>{monument.name}</Popup>
-          </Marker>
+          <MonumentMarker key={monument.id} monument={monument} nowMs={nowMs} onViewDetails={onViewDetails} />
         ))}
         {isValidCoordinate(playerLocation) ? (
           <Marker position={[playerLocation.latitude, playerLocation.longitude]} icon={playerIcon} title="Your location">
@@ -52,5 +59,38 @@ export function MonumentMap({ monuments, playerLocation }: MonumentMapProps) {
         </p>
       ) : null}
     </div>
+  );
+}
+
+function MonumentMarker({ monument, nowMs, onViewDetails }: { monument: MapMonument; nowMs: number; onViewDetails: (monumentId: string) => void }) {
+  const { status } = getMonumentAvailability(monument, nowMs);
+  const appearance = availabilityAppearance[status];
+  const accessibleName = `${monument.name}: ${appearance.label}`;
+  const markerRef = useRef<LeafletMarker>(null);
+
+  // Leaflet titles are creation options; explicitly refresh accessible text without remounting.
+  useEffect(() => {
+    const marker = markerRef.current;
+    const updateLabel = () => {
+      const element = marker?.getElement();
+      element?.setAttribute("title", accessibleName);
+      element?.setAttribute("aria-label", accessibleName);
+    };
+    updateLabel();
+    marker?.on("add", updateLabel);
+    return () => { marker?.off("add", updateLabel); };
+  }, [accessibleName]);
+
+  return (
+    <Marker ref={markerRef} position={[monument.latitude, monument.longitude]} icon={monumentIcons[status]}
+      title={accessibleName} alt={accessibleName}>
+      <Popup minWidth={160} maxWidth={280}>
+        <div style={{ width: "min(260px, calc(100vw - 72px))", maxWidth: "100%", display: "grid", gap: 8 }}>
+          <strong style={{ overflowWrap: "anywhere", paddingRight: 8 }}>{monument.name}</strong>
+          <span>{appearance.description}</span>
+          <MonumentActions available={status === "available"} onViewDetails={() => onViewDetails(monument.id)} />
+        </div>
+      </Popup>
+    </Marker>
   );
 }
