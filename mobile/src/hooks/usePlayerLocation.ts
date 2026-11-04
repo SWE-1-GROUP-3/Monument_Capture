@@ -5,7 +5,7 @@ import type { MapCoordinate } from "../types/mapMonument";
 
 export function usePlayerLocation() {
   const [location, setLocation] = useState<MapCoordinate | null>(null);
-  const [message, setMessage] = useState("Location is optional. Green markers are monuments; blue is your location.");
+  const [message, setMessage] = useState("Location is optional. The legend explains monument availability; blue is your location.");
   const [loading, setLoading] = useState(false);
   const mounted = useRef(true);
   const pending = useRef(false);
