@@ -5,9 +5,9 @@ Monument Capture is a mobile game where players discover nearby monuments, verif
 ## Repository
 
 - `mobile/` — Expo, React Native, and TypeScript frontend
-- `backend/` — Spring Boot REST API (currently only a health endpoint)
+- `backend/` — Spring Boot REST API with migrations, JWT authorization, health, and account identity
 
-The frontend currently uses a temporary local store and local authentication so the implemented app flows remain usable before the backend and database are connected. It starts with a clean capture/review history and contains no presentation controls or fabricated activity.
+The frontend uses Supabase Auth and verifies application identity/role through the backend. Gameplay screens still display the temporary local catalog while step 5 APIs are built. Drafts are local and separate from submitted captures. Real accounts cannot record local-only gameplay successes.
 
 ## Current MVP documentation
 
@@ -17,11 +17,11 @@ The frontend currently uses a temporary local store and local authentication so 
 - [Current MVP Requirements](https://docs.google.com/document/d/1H2VGk9Opk9Qfs1-GMGAfWHScByrwF-YYS534Mgal1w0/edit)
 - [Current MVP Design](https://docs.google.com/document/d/1Fl15HPBlyXUN6gXmj8ybehIFlhytORZeH_qnRWcB1TI/edit)
 
-These documents describe intended MVP behavior, not completed backend functionality. The backend currently exposes only the health endpoint.
+The backend implements Flyway migrations, Supabase JWT verification, role-based route restrictions, and `/api/me`. Shared gameplay and photo APIs remain planned. See [local setup and verification](docs/local-supabase-setup.md).
 
 This branch selects Supabase PostgreSQL/PostGIS, private Storage, and Auth. The integration branch and MVP scope/contract were confirmed on November 17, 2026. See [Supabase branch decisions](docs/supabase-branch-decisions.md) for the rationale, implementation boundaries, remaining setup, and how to return to the baseline. Task ownership remains unassigned.
 
-These choices are documented on `feat/supabase-mvp`, based on `integration/mvp-baseline`. They do not provision services or implement authentication/database/storage integration. No remote push is authorized.
+These choices are documented on `feat/supabase-mvp`, based on `integration/mvp-baseline`. Service provisioning and live Supabase verification remain pending; authentication and database foundations are implemented locally. No remote push is authorized.
 
 For the upcoming sprint, the frontend and backend can run locally with shared database/storage connections. Public deployment is deferred.
 
@@ -42,25 +42,21 @@ npm run web
 
 For native development, run `npm start` and open the project in Expo Go or a compatible development build. Browser camera and location access require `localhost` or HTTPS.
 
-The temporary local accounts all use password `local123`:
-
-| Email | Role |
-| --- | --- |
-| `alex@monument.local` | Player |
-| `sam@monument.local` | Player |
-| `priya@monument.local` | Player |
-| `moderator@monument.local` | Moderator |
-
-These credentials are development scaffolding, not secure authentication. Replace the local auth/store with backend APIs before deployment.
+Login requires a configured Supabase project and a pre-created Auth account mapped to an application user. The former local-password login is removed. Follow the [setup guide](docs/local-supabase-setup.md) for credentials, test accounts, and device networking.
 
 ## Run the backend
 
+First bootstrap PostgreSQL/PostGIS and configure `backend/.env` as described in the setup guide. Then:
+
 ```bash
 cd backend
+set -a
+. ./.env
+set +a
 mvn spring-boot:run
 ```
 
-The current endpoint is `GET http://localhost:8080/api/health`.
+Endpoints: public `GET http://localhost:8080/api/health` and protected `GET /api/me`.
 
 ## Verify the project
 
@@ -80,16 +76,16 @@ mvn test
 - Map-first monument discovery with live device location
 - Monument availability, holder, and lock countdown
 - Distance, GPS accuracy, freshness, lock, and duplicate-capture checks
-- Camera capture or photo upload
-- Capture submission, player activity, holdings, records, and statistics
+- Camera capture or photo selection with resumable account/monument drafts
+- Local prototype capture submission, player activity, holdings, records, and statistics
 - Moderator review queue with approve/reject rules
 - Moderator monument creation, editing, activation, and deactivation
 - Web persistence through local storage
 
 ## Remaining production work
 
-- Implement backend authentication and authorization
-- Add database persistence for users, monuments, captures, and reviews
+- Provision Supabase test accounts and verify live login/refresh/logout; extend ownership checks to upcoming record APIs
+- Connect gameplay services to the migrated database tables
 - Move capture and moderation rules server-side, including transactional one-holder enforcement
 - Add protected photo storage and server-side validation
 - Connect the frontend store to the API

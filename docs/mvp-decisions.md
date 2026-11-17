@@ -11,7 +11,7 @@ Status: Agreed requirements for implementation. This document records decisions;
 - Confirmed for `feat/supabase-mvp`: Supabase PostgreSQL/PostGIS, private Storage, and Supabase Auth with email/password login and bearer access tokens. See [Supabase branch decisions](supabase-branch-decisions.md).
 - Preserve the location eligibility accepted at submission after monument coordinate/radius edits. Approval still checks current active status and current holds, without another player GPS reading or a new freshness check.
 - The [backend, schema, and API contract](backend-schema-api-contract.md) defines the confirmed implementation contract, including accepted location snapshots, naming conventions, future GPS timestamp handling, upload cleanup, retries, and migration order. The user confirmed the MVP scope and contract on November 17, 2026; these decisions do not claim implementation or independent teammate approval.
-- The backend currently has only a health endpoint; the documented gameplay APIs are not implemented yet.
+- The backend now has migrations, JWT verification, role-based route restrictions, health, and `/api/me`. The documented gameplay APIs are not implemented yet; see [local setup](local-supabase-setup.md).
 
 ## Latest confirmations — November 17, 2026
 

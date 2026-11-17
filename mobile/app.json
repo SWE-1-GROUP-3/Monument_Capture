@@ -13,7 +13,8 @@
         {
           "locationWhenInUsePermission": "Allow Monument Capture to use your location for the monument map and capture verification."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

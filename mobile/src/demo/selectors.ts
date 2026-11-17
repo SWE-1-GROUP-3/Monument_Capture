@@ -167,7 +167,7 @@ export type MonumentRecord = {
  *   🎯 Perfect aim    every attempt approved, with at least 2 attempts
  */
 export function getPlayerRecords(state: DemoState, playerId: string, now: number, lockDurationMs: number): MonumentRecord[] {
-  const submitted = state.captures.filter((c) => c.playerId === playerId && c.status !== "in_progress");
+  const submitted = state.captures.filter((c) => c.playerId === playerId);
   const monumentIds = [...new Set(submitted.map((c) => c.monumentId))];
   const intervals = getHoldIntervals(state, playerId, now);
 
@@ -219,7 +219,7 @@ export function sortRecords(records: MonumentRecord[], by: RecordSort): Monument
 
 /** Header tiles on the Records sheet. */
 export function getRecordTotals(state: DemoState, playerId: string, now: number) {
-  const submitted = state.captures.filter((c) => c.playerId === playerId && c.status !== "in_progress");
+  const submitted = state.captures.filter((c) => c.playerId === playerId);
   const approved = submitted.filter((c) => c.status === "approved").length;
   const intervals = getHoldIntervals(state, playerId, now);
   return {

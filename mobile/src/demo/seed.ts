@@ -1,9 +1,6 @@
 import type { DemoState, Monument, User } from "./types";
 
-export const SEED_VERSION = 7;
-
-/** Temporary local credentials until backend authentication is connected. */
-export const LOCAL_PASSWORD = "local123";
+export const SEED_VERSION = 8;
 
 const DAY_MS = 24 * 60 * 60_000;
 
@@ -57,6 +54,7 @@ export function createSeedState(now: number): DemoState {
     users: seedUsers.map((user) => ({ ...user, joinedAt: now - (JOINED_DAYS_AGO[user.id] ?? 1) * DAY_MS })),
     monuments: seedMonuments.map((monument) => ({ ...monument })),
     captures: [],
+    drafts: [],
     reviews: [],
     sessionUserId: null,
   };

@@ -8,9 +8,9 @@ import { Screen } from "../src/components/Screen";
 import { Banner, Button, Card } from "../src/components/ui";
 import { theme } from "../src/constants/theme";
 
-// Temporary local authentication keeps this screen usable until the backend is connected.
+// Supabase credentials are verified against the backend account mapping.
 export default function LoginScreen() {
-  const { isLoggedIn, login } = useAuth();
+  const { isLoggedIn, login, loading, error: authError } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -30,7 +30,7 @@ export default function LoginScreen() {
     if (success) {
       router.replace("/");
     } else {
-      setError("Invalid email or password.");
+      setError("");
     }
   }
 
@@ -70,8 +70,8 @@ export default function LoginScreen() {
           style={styles.input}
           value={password}
         />
-        {error ? <Banner tone="danger">{error}</Banner> : null}
-        <Button label="Log In" icon="log-in-outline" onPress={() => void handleLogin()} />
+        {error || authError ? <Banner tone="danger">{error || authError}</Banner> : null}
+        <Button disabled={loading} label={loading ? "Logging in…" : "Log In"} icon="log-in-outline" onPress={() => void handleLogin()} />
       </Card>
     </Screen>
   );

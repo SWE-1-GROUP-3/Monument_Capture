@@ -40,12 +40,16 @@ Create a private bucket with JPEG/PNG/WebP restrictions and a 10 MiB limit. The 
 
 Return the actual signed upload expiry (currently two hours) and required upload method/headers. Before capture acceptance, inspect actual bytes, decodability, size, ownership binding, and lifecycle state. Verify that a still-valid grant cannot overwrite accepted evidence. Issue short-lived read URLs only to the capture owner or moderators after backend authorization. Apply the contract's cleanup rules to abandoned uploads. [Signed uploads](https://supabase.com/docs/reference/javascript/storage-from-createsigneduploadurl)
 
+## Step 4 progress
+
+Database migrations, Supabase JWT/account verification, frontend SDK login/logout, secure native token storage, account/monument drafts, and local configuration are implemented. See [local setup and verification](local-supabase-setup.md). Database/security tests run locally; hosted services and real accounts remain unprovisioned.
+
 ## Remaining work
 
 - Create or obtain authorized access to the shared Supabase project and private bucket; configure credentials locally without committing secrets.
-- Implement and validate step 4A migrations, including `users.auth_subject_id`, constraints, and real monument seeds.
-- Implement step 4B authentication/authorization and provision test accounts.
-- Implement step 4C account-isolated frontend drafts.
+- Apply the locally validated step 4A migrations to the shared project after review.
+- Provision step 4B test accounts and verify hosted authentication/authorization.
+- Connect step 4C drafts to the real step 5 submission API, preserving uncertain-response retries.
 - Complete step 4D local configuration and verify teammate connectivity.
 - Assign owners, coordinate with teammates about any existing AWS work, and synchronize external requirements/design documents.
 

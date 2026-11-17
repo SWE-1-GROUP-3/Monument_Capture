@@ -1,7 +1,7 @@
 // Local app data model. These shapes are ready to move behind an API once the
 // backend is connected.
-// These mirror the four MVP entities in the design doc so the same shapes can
-// later become Supabase/Firebase tables without changing the screens.
+// These are frontend view shapes. Backend tables/DTOs are defined separately
+// in the schema/API contract; adapters will connect gameplay in steps 5–6.
 
 export type Role = "player" | "moderator";
 
@@ -29,7 +29,7 @@ export type Monument = {
 };
 
 /** The only entity with a stored lifecycle. */
-export type CaptureStatus = "in_progress" | "pending" | "approved" | "rejected";
+export type CaptureStatus = "pending" | "approved" | "rejected";
 
 export type Capture = {
   id: string;
@@ -43,6 +43,9 @@ export type Capture = {
   startedAt: number;
   submittedAt: number | null;
 };
+
+/** Local-only attempt; never part of submitted capture history. */
+export type CaptureDraft = Omit<Capture, "status" | "submittedAt"> & { status: "draft"; submittedAt: null };
 
 export type ReviewDecision = "approved" | "rejected";
 
@@ -62,6 +65,7 @@ export type DemoState = {
   users: User[];
   monuments: Monument[];
   captures: Capture[];
+  drafts: CaptureDraft[];
   reviews: CaptureReview[];
   sessionUserId: string | null;
 };

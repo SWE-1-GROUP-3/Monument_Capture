@@ -1,6 +1,25 @@
 spring:
   application:
     name: monument-capture-api
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:55432/monument_capture}
+    username: ${DATABASE_USERNAME:monument_app}
+    password: ${DATABASE_PASSWORD:}
+  flyway:
+    url: ${MIGRATION_DATABASE_URL:${DATABASE_URL:jdbc:postgresql://localhost:55432/monument_capture}}
+    user: ${MIGRATION_DATABASE_USERNAME:monument_migrator}
+    password: ${MIGRATION_DATABASE_PASSWORD:}
+    default-schema: flyway
+    schemas: flyway,app
+    create-schemas: false
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+
+app:
+  auth:
+    issuer: ${SUPABASE_JWT_ISSUER:${SUPABASE_URL:http://localhost:54321}/auth/v1}
+    audience: ${SUPABASE_JWT_AUDIENCE:authenticated}
+  allowed-origins: ${ALLOWED_ORIGINS:http://localhost:8081,http://localhost:19006}
 
 server:
   port: ${PORT:8080}

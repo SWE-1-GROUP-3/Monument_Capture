@@ -96,7 +96,7 @@ it("opens the monument sheet with an enabled Capture when free and in range", as
   await waitFor(() => expect((cta as HTMLButtonElement).disabled).toBe(false));
   fireEvent.click(cta);
   expect(router.push).toHaveBeenCalledWith("/capture");
-  expect(getDemoState().captures.some((c) => c.monumentId === "washington-arch" && c.status === "in_progress")).toBe(true);
+  expect(getDemoState().drafts.some((c) => c.monumentId === "washington-arch")).toBe(true);
 });
 
 it("disables Capture with a distance hint when out of range", async () => {

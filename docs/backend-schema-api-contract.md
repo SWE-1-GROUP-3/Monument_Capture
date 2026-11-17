@@ -2,7 +2,7 @@
 
 Group 3 · November 17, 2026 · Step 3 implementation baseline
 
-Status: MVP scope and contract confirmed by the user on November 17, 2026 for `feat/supabase-mvp`. Supabase PostgreSQL/PostGIS, private Storage, and Auth are selected. No database migration, application code, account provisioning, or deployment has been performed by updating this document. Independent teammate approval is not claimed.
+Status: MVP scope and contract confirmed by the user on November 17, 2026 for `feat/supabase-mvp`. Supabase PostgreSQL/PostGIS, private Storage, and Auth are selected. Step 4 now implements database migrations, JWT/account mapping, frontend authentication, and local drafts. Account provisioning, shared Supabase integration, and deployment remain pending. See [local setup](local-supabase-setup.md). Independent teammate approval is not claimed.
 
 Read alongside [MVP decisions](mvp-decisions.md). This is the confirmed implementation contract for this Supabase branch; it does not claim that the listed APIs exist in the repository.
 
@@ -31,7 +31,7 @@ One backend with Authentication, Monument, Upload, Capture, Moderation, and Repo
 
 All gameplay database writes go through Spring Boot. Browser clients do not directly update captures, reviews, roles, or monuments. Use a restricted application database identity; migration/admin credentials stay separate. Private storage credentials remain on the backend.
 
-Planned backend environment names: DATABASE_URL (JDBC PostgreSQL URL with TLS), DATABASE_USERNAME, DATABASE_PASSWORD, AUTH_PROVIDER=supabase, STORAGE_PROVIDER=supabase, SUPABASE_URL, SUPABASE_SECRET_KEY (backend only), SUPABASE_JWT_ISSUER, SUPABASE_JWT_AUDIENCE=authenticated, PHOTO_BUCKET, ALLOWED_ORIGINS. Frontend: EXPO_PUBLIC_API_URL, EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY. These names define the implementation contract; the current scaffold does not consume the new variables yet. No credentials are committed. Configure explicit local frontend origins and Authorization/Content-Type CORS headers; gameplay APIs use bearer tokens rather than authentication cookies.
+Planned backend environment names: DATABASE_URL (JDBC PostgreSQL URL with TLS), DATABASE_USERNAME, DATABASE_PASSWORD, AUTH_PROVIDER=supabase, STORAGE_PROVIDER=supabase, SUPABASE_URL, SUPABASE_SECRET_KEY (backend only), SUPABASE_JWT_ISSUER, SUPABASE_JWT_AUDIENCE=authenticated, PHOTO_BUCKET, ALLOWED_ORIGINS. Frontend: EXPO_PUBLIC_API_URL, EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY. These names define the implementation contract; backend connection/auth/origin and frontend auth variables are consumed; PHOTO_BUCKET and SUPABASE_SECRET_KEY remain reserved for step 5. Migration credentials use separate MIGRATION_DATABASE_URL, MIGRATION_DATABASE_USERNAME and MIGRATION_DATABASE_PASSWORD variables. No credentials are committed. Configure explicit local frontend origins and Authorization/Content-Type CORS headers; gameplay APIs use bearer tokens rather than authentication cookies.
 
 ### Supabase authentication and session contract
 
@@ -47,7 +47,7 @@ Use versioned SQL migrations; select Flyway as the migration runner, with its de
 
 ## 3. Schema contract
 
-Four core domain tables plus one supporting upload-lifecycle table in a dedicated `app` schema outside the exposed Supabase Data API schemas. Qualify migrations/queries consistently; SQL examples below omit schema qualification for readability. All foreign keys use restrictive deletion. Monument deactivation preserves capture/review history. All times are timestamptz; APIs serialize ISO 8601 UTC strings ending in Z. Generate UUIDs in the backend. All text lengths and finite numeric values are checked before persistence and with database constraints where applicable.
+Flyway history lives in the private `flyway` schema. Four core domain tables plus one supporting upload-lifecycle table live in a dedicated `app` schema outside the exposed Supabase Data API schemas. Qualify migrations/queries consistently; SQL examples below omit schema qualification for readability. All foreign keys use restrictive deletion. Monument deactivation preserves capture/review history. All times are timestamptz; APIs serialize ISO 8601 UTC strings ending in Z. Generate UUIDs in the backend. All text lengths and finite numeric values are checked before persistence and with database constraints where applicable.
 
 ### users
 
@@ -265,7 +265,7 @@ This lock/state transition prevents cleanup racing an accepted submission. A dra
 
 ## 9. Migration and implementation sequence
 
-1. V1: enable PostGIS through authorized setup; create users and monuments with checks.
+1. Admin bootstrap: enable PostGIS and create app/flyway schemas with separate roles. V1: create users and monuments with checks.
 2. V2: photo_uploads, captures, capture_reviews, foreign keys, lifecycle checks, and indexes. DDL migration must be validated on a disposable PostgreSQL/PostGIS database before shared application.
 3. V3: seed prototype monuments using stable UUIDs. Obtain actual repository coordinates during implementation rather than inventing values. Pre-create player/moderator accounts with selected auth tooling; no passwords in migrations.
 4. Include the unique users.auth_subject_id mapping in V1. Provision Supabase Auth identities and matching application users through trusted tooling after schema creation; no backend password/session tables. Configure database/storage connections and signing keys for the selected Supabase project.
@@ -282,7 +282,8 @@ Required verification: one pending capture under concurrent duplicates; safe los
 - [x] Location eligibility preserved after submission; current active/hold checks retained at approval.
 - [x] User selects Supabase PostgreSQL/PostGIS and private Storage for this branch.
 - [x] User selects Supabase Auth; bearer-token transport, SDK login/refresh/logout, identity mapping, and logout limitations specified.
-- [ ] Validate migrations and provider adapters during implementation; this document is not test evidence.
+- [x] Validate V1–V3 migrations and constraints on disposable PostgreSQL/PostGIS during step 4.
+- [ ] Verify real Supabase accounts and Storage adapters against the shared project; local tests do not establish this.
 
 ## Technical references
 

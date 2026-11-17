@@ -11,11 +11,12 @@ import { installWebTheme } from "../src/theme/installWebTheme";
 installWebTheme();
 
 function AuthGuard() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, loading } = useAuth();
   const router = useRouter();
   const segments = useSegments();
 
   useEffect(() => {
+    if (loading) return;
     const onLoginScreen = segments[0] === "login";
 
     if (!isLoggedIn && !onLoginScreen) {
@@ -23,7 +24,9 @@ function AuthGuard() {
     } else if (isLoggedIn && onLoginScreen) {
       router.replace("/");
     }
-  }, [isLoggedIn, segments, router]);
+  }, [isLoggedIn, loading, segments, router]);
+
+  if (loading && segments[0] !== "login") return null;
 
   return (
     <>

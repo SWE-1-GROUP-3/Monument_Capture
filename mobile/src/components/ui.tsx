@@ -115,7 +115,6 @@ const holdPill: Record<HoldKind, { label: string; bg: string; fg: string }> = {
 };
 
 const capturePill: Record<CaptureStatus, { label: string; bg: string; fg: string }> = {
-  in_progress: { label: "In progress", bg: theme.colors.infoSoft, fg: theme.colors.info },
   pending: { label: "Pending review", bg: theme.colors.warningSoft, fg: theme.colors.warning },
   approved: { label: "Approved", bg: theme.colors.primarySoft, fg: theme.colors.primary },
   rejected: { label: "Rejected", bg: theme.colors.dangerSoft, fg: theme.colors.danger },

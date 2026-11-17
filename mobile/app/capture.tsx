@@ -11,7 +11,8 @@ import { CameraPanel } from "../src/components/camera/CameraPanel";
 import { returnToMap } from "../src/game/homeIntent";
 import { findMonument, getInProgressCapture } from "../src/demo/rules";
 import { demo, useCurrentUser, useDemoState, useNow } from "../src/demo/store";
-import type { Capture, Monument, User } from "../src/demo/types";
+import { getCapturePosition } from "../src/demo/location";
+import type { CaptureDraft, Monument, User } from "../src/demo/types";
 import { monumentView, monumentViews } from "../src/demo/views";
 import type { CaptureCheckState } from "../src/features/capture/types";
 import { useCaptureEligibility } from "../src/features/capture/useCaptureEligibility";
@@ -45,7 +46,7 @@ export default function CaptureScreen() {
     );
   }
 
-  const inProgress = getInProgressCapture(state, user.id);
+  const inProgress = getInProgressCapture(state, user.id, monumentId || undefined);
   const inProgressMonument = inProgress ? findMonument(state, inProgress.monumentId) : undefined;
 
   if (submitted) {
@@ -63,6 +64,7 @@ export default function CaptureScreen() {
   if (inProgress && inProgressMonument) {
     return (
       <PhotoStep
+        key={inProgress.id}
         capture={inProgress}
         monument={inProgressMonument}
         onSubmitted={() => setSubmitted({ monumentName: inProgressMonument.name, monumentId: inProgressMonument.id })}
@@ -183,8 +185,9 @@ function statusTitle(status: CaptureCheckState["status"]) {
 
 // ---------- Step 3: photo ----------
 
-function PhotoStep({ capture, monument, onSubmitted }: { capture: Capture; monument: Monument; onSubmitted: () => void }) {
-  const [photo, setPhoto] = useState<string | null>(null);
+function PhotoStep({ capture, monument, onSubmitted }: { capture: CaptureDraft; monument: Monument; onSubmitted: () => void }) {
+  const photo = capture.photoUri || null;
+  const setPhoto = (uri: string | null) => demo.saveDraftPhoto(capture.id, uri ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -201,13 +204,19 @@ function PhotoStep({ capture, monument, onSubmitted }: { capture: Capture; monum
     }
   };
 
-  const submit = () => {
-    if (!photo) return;
+  const submit = async () => {
+    if (!photo || busy) return;
+    setBusy(true);
+    setError(null);
     try {
-      demo.submitPhoto(capture.id, photo);
+      const location = await getCapturePosition();
+      if (!location.ok) throw new Error(location.message);
+      demo.submitPhoto(capture.id, photo, location.position);
       onSubmitted();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not submit the capture.");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -231,8 +240,9 @@ function PhotoStep({ capture, monument, onSubmitted }: { capture: Capture; monum
       )}
 
       {error ? <Banner tone="danger" title="Couldn't use that photo">{error}</Banner> : null}
-      <Button label="Submit for review" icon="send" onPress={submit} disabled={!photo || busy} />
-      <Button label="Cancel capture" variant="ghost" onPress={() => { demo.cancelCapture(capture.id); returnToMap({ monumentId: monument.id }); }} />
+      <Button label="Submit for review" icon="send" onPress={() => void submit()} disabled={!photo || busy} />
+      <Button label="Back to map" variant="secondary" disabled={busy} onPress={() => returnToMap({ monumentId: monument.id })} />
+      <Button label="Discard draft" variant="ghost" disabled={busy} onPress={() => { demo.cancelCapture(capture.id); returnToMap({ monumentId: monument.id }); }} />
     </Screen>
   );
 }

@@ -9,12 +9,14 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 
 import type { PlayerPosition } from "../features/capture/types";
 import * as rules from "./rules";
-import { createSeedState, LOCAL_PASSWORD, SEED_VERSION } from "./seed";
+import { createSeedState, SEED_VERSION } from "./seed";
 import { demoStorage } from "./storage";
 import type { DemoState, ReviewDecision, User } from "./types";
 
 let state: DemoState = loadInitialState();
 let lastSaveOk = true;
+let sharedSession = false;
+let signOut: (() => Promise<void>) | undefined;
 const listeners = new Set<() => void>();
 
 function loadInitialState(): DemoState {
@@ -22,7 +24,7 @@ function loadInitialState(): DemoState {
   if (raw) {
     try {
       const parsed = JSON.parse(raw) as DemoState;
-      if (parsed && parsed.version === SEED_VERSION && Array.isArray(parsed.monuments)) return parsed;
+      if (parsed && parsed.version === SEED_VERSION && Array.isArray(parsed.monuments)) return { ...parsed, sessionUserId: null };
     } catch {
       // Corrupt or old data: fall through to a fresh seed.
     }
@@ -75,19 +77,9 @@ export function isPersisting() {
 
 export const demo = {
   // ----- Session -----
-  /**
-   * Temporary local email + password login. Replace this with the backend auth
-   * call when authentication is connected.
-   */
-  login(email: string, password: string): User | null {
-    const clean = email.trim().toLowerCase();
-    const user = state.users.find((u) => u.email.toLowerCase() === clean);
-    if (!user || password !== LOCAL_PASSWORD) return null;
-    setState({ ...state, sessionUserId: user.id });
-    return user;
-  },
   logout() {
     setState({ ...state, sessionUserId: null });
+    if (signOut) void signOut();
   },
 
   // ----- Capture flow -----
@@ -95,32 +87,59 @@ export const demo = {
     return rules.checkCaptureEligibility(state, monumentId, playerId, position, demoNow());
   },
   startCapture(monumentId: string, playerId: string, position: PlayerPosition) {
+    if (state.sessionUserId !== playerId) throw new rules.RuleError("Sign in to create a draft.");
     const result = rules.startCapture(state, { monumentId, playerId, position }, demoNow());
     setState(result.state);
     return result.capture;
   },
-  submitPhoto(captureId: string, photoUri: string) {
-    setState(rules.submitCapturePhoto(state, captureId, photoUri, demoNow()));
+  saveDraftPhoto(draftId: string, photoUri: string) {
+    requireOwnDraft(draftId);
+    setState(rules.saveDraftPhoto(state, draftId, photoUri));
+  },
+  submitPhoto(captureId: string, photoUri: string, position?: PlayerPosition) {
+    requireOwnDraft(captureId);
+    if (sharedSession) throw new rules.RuleError("Capture submission is not available yet. Your draft is saved.");
+    setState(rules.submitCapturePhoto(state, captureId, photoUri, demoNow(), position));
   },
   cancelCapture(captureId: string) {
+    requireOwnDraft(captureId);
     setState(rules.cancelCapture(state, captureId));
   },
 
   // ----- Moderation -----
   review(captureId: string, moderatorId: string, decision: ReviewDecision, reason: string) {
+    if (sharedSession) throw new rules.RuleError("Capture review is not available yet.");
     setState(rules.reviewCapture(state, { captureId, moderatorId, decision, reason }, demoNow()));
   },
   saveMonument(input: rules.MonumentInput) {
+    if (sharedSession) throw new rules.RuleError("Monument changes are not available yet.");
     const result = rules.saveMonument(state, input);
     setState(result.state);
     return result.monument;
   },
   setMonumentActive(monumentId: string, active: boolean) {
+    if (sharedSession) throw new rules.RuleError("Monument changes are not available yet.");
     setState(rules.setMonumentActive(state, monumentId, active));
   },
 };
 
 /** Test helper: replace the whole state. */
 export function __setDemoStateForTests(next: DemoState) {
+  sharedSession = false;
   setState(next);
 }
+
+function requireOwnDraft(id: string) {
+  if (!state.sessionUserId || !state.drafts.some(d => d.id === id && d.playerId === state.sessionUserId)) {
+    throw new rules.RuleError("This draft belongs to another account or is unavailable.");
+  }
+}
+
+/** Auth bridge for screens still using the local gameplay store during step 6. */
+export function setAuthenticatedUser(user: User | null) {
+  sharedSession = !!user;
+  setState({ ...state, sessionUserId: user?.id ?? null,
+    users: user ? [...state.users.filter(u => u.id !== user.id), user] : state.users });
+}
+
+export function registerSignOut(action: (() => Promise<void>) | undefined) { signOut = action; }

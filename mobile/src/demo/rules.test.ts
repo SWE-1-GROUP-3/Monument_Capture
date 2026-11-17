@@ -79,10 +79,10 @@ describe("capture checks run cheapest first", () => {
 });
 
 describe("capture lifecycle", () => {
-  it("moves in_progress → pending → approved and locks the monument", () => {
+  it("moves a local draft → pending → approved and locks the monument", () => {
     const seed = createSeedState(NOW);
     const started = startCapture(seed, { monumentId: "washington-arch", playerId: "u-priya", position: atArch }, NOW);
-    expect(started.capture.status).toBe("in_progress");
+    expect(started.capture.status).toBe("draft");
 
     const pending = submitCapturePhoto(started.state, started.capture.id, "data:image/png;base64,x", NOW);
     expect(getPendingQueue(pending).map((q) => q.capture.id)).toContain(started.capture.id);

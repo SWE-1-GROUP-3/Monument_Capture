@@ -1,11 +1,12 @@
 // All game rules as pure functions over the local app state.
 // Nothing here touches React, storage or the device, so it is easy to test and
-// it is the part that moves to the backend (Supabase/Firebase functions) later.
+// gameplay enforcement moves to Spring Boot services during step 5.
 
 import { evaluateCaptureProximity } from "../features/capture/proximity";
 import type { PlayerPosition } from "../features/capture/types";
 import type {
   Capture,
+  CaptureDraft,
   CaptureReview,
   DemoState,
   Monument,
@@ -73,7 +74,7 @@ export function getHoldingsFor(state: DemoState, playerId: string, now: number) 
 
 export function getHistoryFor(state: DemoState, playerId: string) {
   return state.captures
-    .filter((c) => c.playerId === playerId && c.status !== "in_progress")
+    .filter((c) => c.playerId === playerId)
     .sort((a, b) => (b.submittedAt ?? b.startedAt) - (a.submittedAt ?? a.startedAt))
     .map((capture) => ({
       capture,
@@ -111,8 +112,8 @@ export type CaptureCheck =
 
 /**
  * The capture checks, cheapest first: GPS accuracy, distance to the monument,
- * then whether the monument is locked. A capture record is only created when
- * all of them pass.
+ * then whether the monument is locked. Starting the flow creates/resumes a
+ * local draft; a submitted capture is created only on successful submission.
  */
 export function checkCaptureEligibility(
   state: DemoState,
@@ -180,41 +181,44 @@ export function startCapture(
   state: DemoState,
   input: { monumentId: string; playerId: string; position: PlayerPosition },
   now: number,
-): { state: DemoState; capture: Capture } {
+): { state: DemoState; capture: CaptureDraft } {
+  if (findUser(state, input.playerId)?.role !== "player") throw new RuleError("Only players can create drafts.");
   const check = checkCaptureEligibility(state, input.monumentId, input.playerId, input.position, now);
   if (!check.ok) throw new RuleError(check.message);
-
-  // A player has at most one capture in progress; starting another replaces it.
-  const captures = state.captures.filter((c) => !(c.playerId === input.playerId && c.status === "in_progress"));
-  const capture: Capture = {
-    id: newId("c"),
-    monumentId: input.monumentId,
-    playerId: input.playerId,
-    status: "in_progress",
-    distanceMeters: check.distanceMeters,
+  const existing = state.drafts.find(d => d.playerId === input.playerId && d.monumentId === input.monumentId);
+  const capture: CaptureDraft = existing ?? {
+    id: newId("draft"), monumentId: input.monumentId, playerId: input.playerId,
+    status: "draft", distanceMeters: check.distanceMeters,
     accuracyMeters: Math.round(input.position.accuracyMeters ?? 0),
-    photoUri: "",
-    startedAt: now,
-    submittedAt: null,
+    photoUri: "", startedAt: now, submittedAt: null,
   };
-  return { state: { ...state, captures: [...captures, capture] }, capture };
+  return { state: { ...state, drafts: [...state.drafts.filter(d => d.id !== capture.id), capture] }, capture };
 }
 
-export function submitCapturePhoto(state: DemoState, captureId: string, photoUri: string, now: number): DemoState {
-  const capture = findCapture(state, captureId);
-  if (!capture || capture.status !== "in_progress") throw new RuleError("This capture is no longer in progress.");
+export function saveDraftPhoto(state: DemoState, draftId: string, photoUri: string): DemoState {
+  return { ...state, drafts: state.drafts.map(d => d.id === draftId ? { ...d, photoUri } : d) };
+}
+
+/** Temporary local submission adapter until the upload/capture APIs land in step 5. */
+export function submitCapturePhoto(state: DemoState, draftId: string, photoUri: string, now: number, position?: PlayerPosition): DemoState {
+  const draft = state.drafts.find(d => d.id === draftId);
+  if (!draft) throw new RuleError("This draft is no longer available.");
   if (!photoUri) throw new RuleError("Add a photo of the monument before submitting.");
-  return updateCapture(state, captureId, { status: "pending", photoUri, submittedAt: now });
+  if (position) {
+    const check = checkCaptureEligibility(state, draft.monumentId, draft.playerId, position, now);
+    if (!check.ok) throw new RuleError(check.message);
+  }
+  const capture: Capture = { ...draft, status: "pending", photoUri, submittedAt: now };
+  return { ...state, captures: [...state.captures, capture], drafts: state.drafts.filter(d => d.id !== draftId) };
 }
 
-export function cancelCapture(state: DemoState, captureId: string): DemoState {
-  const capture = findCapture(state, captureId);
-  if (!capture || capture.status !== "in_progress") return state;
-  return { ...state, captures: state.captures.filter((c) => c.id !== captureId) };
+/** Explicit discard only; navigating away or losing a request never calls this. */
+export function cancelCapture(state: DemoState, draftId: string): DemoState {
+  return { ...state, drafts: state.drafts.filter(d => d.id !== draftId) };
 }
 
-export function getInProgressCapture(state: DemoState, playerId: string) {
-  return state.captures.find((c) => c.playerId === playerId && c.status === "in_progress");
+export function getInProgressCapture(state: DemoState, playerId: string, monumentId?: string) {
+  return state.drafts.filter(d => d.playerId === playerId && (!monumentId || d.monumentId === monumentId)).at(-1);
 }
 
 // ---------- Moderation ----------
