@@ -83,7 +83,6 @@ export default function ReviewScreen() {
               <DetailRow label="GPS accuracy" value={`±${capture.accuracyMeters} m`} />
               <DetailRow label="Submitted" value={capture.submittedAt ? `${new Date(capture.submittedAt).toLocaleString()} (${formatTimeAgo(now - capture.submittedAt)})` : "—"} />
               <DetailRow label="Player" value={player ? `${player.name} (${player.email})` : "Unknown"} />
-              {capture.simulatedPosition ? <DetailRow label="Position source" value="Simulated (demo tool)" tone="warning" /> : null}
             </Card>
 
             {review ? (

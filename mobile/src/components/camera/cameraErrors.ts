@@ -1,5 +1,3 @@
-import type { CameraMode } from "../../demo/types";
-
 export type CameraErrorCode = "denied" | "missing" | "busy" | "insecure" | "unknown";
 
 export type CameraError = {
@@ -58,9 +56,4 @@ export function cameraErrorFromDomError(error: unknown): CameraError {
     default:
       return CAMERA_ERRORS.unknown;
   }
-}
-
-/** The error forced by Demo tools, or null when the real camera should be used. */
-export function simulatedCameraError(mode: CameraMode): CameraError | null {
-  return mode === "real" ? null : CAMERA_ERRORS[mode];
 }

@@ -5,12 +5,10 @@ import { StyleSheet, Text, TextInput, View } from "react-native";
 
 import { useAuth } from "../src/auth/AuthContext";
 import { Screen } from "../src/components/Screen";
-import { Banner, Button, Card, SectionTitle } from "../src/components/ui";
+import { Banner, Button, Card } from "../src/components/ui";
 import { theme } from "../src/constants/theme";
-import { DEMO_PASSWORD, seedUsers } from "../src/demo/seed";
 
-// US-01: email + password login and its error messages are Iris's design;
-// the demo-account shortcuts below fill the form for quick demos.
+// Temporary local authentication keeps this screen usable until the backend is connected.
 export default function LoginScreen() {
   const { isLoggedIn, login } = useAuth();
   const [email, setEmail] = useState("");
@@ -75,33 +73,6 @@ export default function LoginScreen() {
         {error ? <Banner tone="danger">{error}</Banner> : null}
         <Button label="Log In" icon="log-in-outline" onPress={() => void handleLogin()} />
       </Card>
-
-      <SectionTitle>Demo accounts</SectionTitle>
-      <Text style={styles.hint}>{`Every demo account uses the password ${DEMO_PASSWORD}. Tap one to log in.`}</Text>
-      {seedUsers.map((u) => (
-        <Card
-          key={u.id}
-          onPress={() => {
-            setEmail(u.email);
-            setPassword(DEMO_PASSWORD);
-            void handleLogin(u.email, DEMO_PASSWORD);
-          }}
-          style={styles.account}
-        >
-          <View style={[styles.avatar, u.role === "moderator" && { backgroundColor: theme.colors.warningSoft }]}>
-            <Ionicons
-              color={u.role === "moderator" ? theme.colors.warning : theme.colors.primary}
-              name={u.role === "moderator" ? "shield-checkmark" : "person"}
-              size={20}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.accountName}>{u.name}</Text>
-            <Text style={styles.accountMeta}>{u.email} · {u.role === "moderator" ? "Moderator" : "Player"}</Text>
-          </View>
-          <Ionicons color={theme.colors.muted} name="chevron-forward" size={20} />
-        </Card>
-      ))}
     </Screen>
   );
 }
@@ -124,16 +95,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     padding: 14,
   },
-  hint: { color: theme.colors.muted, marginTop: -10 },
-  account: { alignItems: "center", flexDirection: "row", gap: theme.spacing.medium },
-  avatar: {
-    alignItems: "center",
-    backgroundColor: theme.colors.primarySoft,
-    borderRadius: 20,
-    height: 40,
-    justifyContent: "center",
-    width: 40,
-  },
-  accountName: { color: theme.colors.text, fontSize: 16, fontWeight: "800" },
-  accountMeta: { color: theme.colors.muted, marginTop: 2 },
 });

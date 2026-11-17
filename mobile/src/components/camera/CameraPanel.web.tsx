@@ -5,16 +5,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { theme } from "../../constants/theme";
-import { useDemoState } from "../../demo/store";
 import { Banner, Button } from "../ui";
-import { CAMERA_ERRORS, cameraErrorFromDomError, simulatedCameraError, type CameraError } from "./cameraErrors";
+import { CAMERA_ERRORS, cameraErrorFromDomError, type CameraError } from "./cameraErrors";
 
 const MAX_SIDE = 960;
 
 type Phase = { kind: "idle" } | { kind: "starting" } | { kind: "live" } | { kind: "error"; error: CameraError };
 
 export function CameraPanel({ onCaptured, onStart }: { onCaptured: (photoUri: string) => void; onStart?: () => void }) {
-  const mode = useDemoState().settings.camera;
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -37,12 +35,6 @@ export function CameraPanel({ onCaptured, onStart }: { onCaptured: (photoUri: st
   const start = async () => {
     onStart?.();
     setPhase({ kind: "starting" });
-    const forced = simulatedCameraError(mode);
-    if (forced) {
-      await new Promise((r) => setTimeout(r, 400));
-      setPhase({ kind: "error", error: forced });
-      return;
-    }
     if (!navigator.mediaDevices?.getUserMedia) {
       setPhase({ kind: "error", error: window.isSecureContext === false ? CAMERA_ERRORS.insecure : CAMERA_ERRORS.missing });
       return;

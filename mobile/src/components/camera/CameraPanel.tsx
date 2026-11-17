@@ -6,12 +6,10 @@ import { useState } from "react";
 import { Linking, StyleSheet, Text, View } from "react-native";
 
 import { theme } from "../../constants/theme";
-import { useDemoState } from "../../demo/store";
 import { Banner, Button } from "../ui";
-import { CAMERA_ERRORS, simulatedCameraError, type CameraError } from "./cameraErrors";
+import { CAMERA_ERRORS, type CameraError } from "./cameraErrors";
 
 export function CameraPanel({ onCaptured, onStart }: { onCaptured: (photoUri: string) => void; onStart?: () => void }) {
-  const mode = useDemoState().settings.camera;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<{ error: CameraError; canOpenSettings: boolean } | null>(null);
 
@@ -20,11 +18,6 @@ export function CameraPanel({ onCaptured, onStart }: { onCaptured: (photoUri: st
     setBusy(true);
     setError(null);
     try {
-      const forced = simulatedCameraError(mode);
-      if (forced) {
-        setError({ error: forced, canOpenSettings: forced.code === "denied" });
-        return;
-      }
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
         setError({ error: CAMERA_ERRORS.denied, canOpenSettings: !permission.canAskAgain });

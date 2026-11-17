@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { captureMonument } from "../../data/captureMonument";
 import { distanceInMeters, evaluateCaptureProximity, MAX_LOCATION_AGE_MS } from "./proximity";
+
+const captureMonument = {
+  id: "washington-arch",
+  name: "Washington Square Arch",
+  latitude: 40.7312,
+  longitude: -73.9971,
+  captureRadiusMeters: 100,
+};
 
 const NOW = 1_000_000;
 

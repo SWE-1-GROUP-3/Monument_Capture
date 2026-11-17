@@ -1,4 +1,5 @@
-// Data model for the frontend-only demo.
+// Local app data model. These shapes are ready to move behind an API once the
+// backend is connected.
 // These mirror the four MVP entities in the design doc so the same shapes can
 // later become Supabase/Firebase tables without changing the screens.
 
@@ -9,7 +10,7 @@ export type User = {
   name: string;
   email: string;
   role: Role;
-  /** When the account was created (seed data); shown on the profile. */
+  /** When the account was created; shown on the profile. */
   joinedAt?: number;
 };
 
@@ -37,8 +38,6 @@ export type Capture = {
   status: CaptureStatus;
   distanceMeters: number;
   accuracyMeters: number;
-  /** True when the position came from the demo location simulator. */
-  simulatedPosition: boolean;
   /** Data URL (web) or file URI (native). Empty until the photo step. */
   photoUri: string;
   startedAt: number;
@@ -58,24 +57,6 @@ export type CaptureReview = {
   lockedUntil: number | null;
 };
 
-/** Demo-only settings. Not part of the real data model. */
-export type SimulatedLocation =
-  | { mode: "real" }
-  /** Demo error cases: behave as if the browser/device refused or failed. */
-  | { mode: "denied" }
-  | { mode: "unavailable" }
-  | { mode: "simulated"; latitude: number; longitude: number; accuracyMeters: number; label: string; monumentId?: string };
-
-/** "real" uses the device camera; the others force an error for the demo. */
-export type CameraMode = "real" | "denied" | "missing" | "busy";
-
-export type DemoSettings = {
-  /** Milliseconds added to the real clock, so locks can be fast-forwarded in a demo. */
-  clockOffsetMs: number;
-  location: SimulatedLocation;
-  camera: CameraMode;
-};
-
 export type DemoState = {
   version: number;
   users: User[];
@@ -83,7 +64,6 @@ export type DemoState = {
   captures: Capture[];
   reviews: CaptureReview[];
   sessionUserId: string | null;
-  settings: DemoSettings;
 };
 
 /** Read-time view of a monument's hold status. Never stored. */

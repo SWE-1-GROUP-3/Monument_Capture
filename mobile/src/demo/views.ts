@@ -1,4 +1,4 @@
-// Screen-ready views over the demo state.
+// Screen-ready views over the local app state.
 import type { HoldKind } from "../components/ui";
 import type { MapMonument } from "../types/mapMonument";
 import { formatRemaining, getHold } from "./rules";

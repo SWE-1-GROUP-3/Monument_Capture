@@ -1,5 +1,5 @@
-// Small shared UI building blocks used across the demo screens.
-// Note: react-native's Alert does nothing on web, so the demo shows all
+// Small shared UI building blocks used across the app screens.
+// Note: react-native's Alert does nothing on web, so the app shows all
 // feedback inline with <Banner> instead.
 
 import { Ionicons } from "@expo/vector-icons";

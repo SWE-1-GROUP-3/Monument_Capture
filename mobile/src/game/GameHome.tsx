@@ -1,5 +1,5 @@
-// Native fallback. The map-first redesign targets the web demo (it relies on
-// Leaflet and CSS); on iOS/Android this shows the store-backed map and the
+// Native fallback. The map-first web layout relies on Leaflet and CSS;
+// on iOS/Android this shows the store-backed map and the
 // key actions as simple buttons.
 import { router } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
@@ -18,7 +18,7 @@ export function GameHome({ user }: GameHomeProps) {
   const nowMs = useStatusTime();
   const views = monumentViews(state, user.id, nowMs);
   return (
-    <Screen title="Monument map" subtitle="The full map-first layout runs in the web demo.">
+    <Screen title="Monument map" subtitle="Explore active monuments and open one to see its current status.">
       <View style={styles.map}>
         <MonumentMap
           monuments={views.map(toMapMonument)}

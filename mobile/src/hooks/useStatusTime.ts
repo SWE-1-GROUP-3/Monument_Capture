@@ -2,13 +2,9 @@ import { useCallback, useState } from "react";
 import { AppState } from "react-native";
 import { useFocusEffect } from "expo-router";
 
-import { useDemoState } from "../demo/store";
-
-// One clock for the focused screen; location requests and mock initialization are independent.
+// One clock for the focused screen; location requests are independent.
 export function useStatusTime() {
   const [nowMs, setNowMs] = useState(Date.now);
-  // Demo tools can fast-forward the game clock; 0 in normal use.
-  const offset = useDemoState().settings.clockOffsetMs;
 
   useFocusEffect(useCallback(() => {
     let timer: ReturnType<typeof setInterval> | undefined;
@@ -33,5 +29,5 @@ export function useStatusTime() {
     };
   }, []));
 
-  return nowMs + offset;
+  return nowMs;
 }

@@ -1,6 +1,6 @@
 // The map-first home screen (web): a full-screen Leaflet map with floating
-// controls and bottom sheets, Pokémon GO style. All data comes from the demo
-// store and its read-only selectors.
+// controls and bottom sheets, Pokémon GO style. Data comes from the local store
+// and its read-only selectors.
 import { divIcon, type Map as LeafletMap } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -122,7 +122,7 @@ export function GameHome({ user, initialSheet, initialMonumentId, justSubmitted 
     setZoom(m.getZoom());
   }, []);
 
-  // Follow the player when their (real or simulated) position changes.
+  // Follow the player when their device position changes.
   const posKey = position ? `${position.latitude.toFixed(6)},${position.longitude.toFixed(6)}` : "";
   const lastPos = useRef("");
   useEffect(() => {

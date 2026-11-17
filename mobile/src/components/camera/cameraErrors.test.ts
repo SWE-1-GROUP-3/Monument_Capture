@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { cameraErrorFromDomError, simulatedCameraError } from "./cameraErrors";
+import { cameraErrorFromDomError } from "./cameraErrors";
 
 const domError = (name: string) => Object.assign(new Error(name), { name });
 
@@ -16,12 +16,5 @@ describe("camera error messages", () => {
 
   it("explains how to fix a blocked camera", () => {
     expect(cameraErrorFromDomError(domError("NotAllowedError")).message).toContain("Allow camera access");
-  });
-
-  it("forces the chosen error from Demo tools, and none for the real camera", () => {
-    expect(simulatedCameraError("real")).toBeNull();
-    expect(simulatedCameraError("denied")?.code).toBe("denied");
-    expect(simulatedCameraError("missing")?.code).toBe("missing");
-    expect(simulatedCameraError("busy")?.code).toBe("busy");
   });
 });

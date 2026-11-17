@@ -16,12 +16,12 @@ const IDLE_STATE: CaptureCheckState = {
 
 /**
  * Runs the capture checks for one monument: location permission, GPS freshness,
- * accuracy, distance, lock and duplicate checks (see demo/rules.ts).
+ * accuracy, distance, lock and duplicate checks.
  * When eligible, `position` holds the exact fix used for the capture record.
  */
 export function useCaptureEligibility(monumentId: string | undefined, playerId: string | undefined) {
   const [state, setState] = useState<CaptureCheckState>(IDLE_STATE);
-  const [checked, setChecked] = useState<{ position: PlayerPosition; simulated: boolean } | null>(null);
+  const [checked, setChecked] = useState<{ position: PlayerPosition } | null>(null);
   const pending = useRef(false);
 
   // A different monument means a fresh check.
@@ -50,7 +50,7 @@ export function useCaptureEligibility(monumentId: string | undefined, playerId: 
         return;
       }
 
-      setChecked({ position: result.position, simulated: result.simulated });
+      setChecked({ position: result.position });
       setState({
         status: "eligible",
         distanceMeters: check.distanceMeters,

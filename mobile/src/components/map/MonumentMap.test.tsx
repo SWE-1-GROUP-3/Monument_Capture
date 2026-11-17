@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mapMonuments } from "../../data/mapMonuments";
+import { mapMonuments } from "../../testing/mapMonuments";
 import { MonumentMap } from "./MonumentMap.web";
 
 vi.mock("react-native", () => vi.importActual("react-native-web"));

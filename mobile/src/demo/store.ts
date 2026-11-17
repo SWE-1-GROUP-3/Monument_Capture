@@ -1,17 +1,17 @@
-// The demo's single source of truth.
+// The app's temporary local source of truth.
 //
 // Screens read state with useDemoState() and change it only through `demo.*`
 // actions. The rules themselves live in rules.ts. When the team moves to
-// Supabase or Firebase, this file is the one that gets rewritten: the actions
+// a backend, this file is the one that gets rewritten: the actions
 // become API calls and the screens stay the same.
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 
 import type { PlayerPosition } from "../features/capture/types";
 import * as rules from "./rules";
-import { createSeedState, DEMO_PASSWORD, SEED_VERSION } from "./seed";
+import { createSeedState, LOCAL_PASSWORD, SEED_VERSION } from "./seed";
 import { demoStorage } from "./storage";
-import type { CameraMode, DemoState, Monument, ReviewDecision, SimulatedLocation, User } from "./types";
+import type { DemoState, ReviewDecision, User } from "./types";
 
 let state: DemoState = loadInitialState();
 let lastSaveOk = true;
@@ -45,9 +45,9 @@ export function getDemoState() {
   return state;
 }
 
-/** The game clock. Stands in for the server clock; the demo can fast-forward it. */
+/** Local clock. Replace with server time when the backend is connected. */
 export function demoNow() {
-  return Date.now() + state.settings.clockOffsetMs;
+  return Date.now();
 }
 
 export function useDemoState(): DemoState {
@@ -61,13 +61,12 @@ export function useCurrentUser(): User | undefined {
 
 /** Current game time, re-rendering every `intervalMs` so countdowns tick. */
 export function useNow(intervalMs = 1000) {
-  const offset = useDemoState().settings.clockOffsetMs;
   const [real, setReal] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setReal(Date.now()), intervalMs);
     return () => clearInterval(id);
   }, [intervalMs]);
-  return real + offset;
+  return real;
 }
 
 export function isPersisting() {
@@ -77,20 +76,15 @@ export function isPersisting() {
 export const demo = {
   // ----- Session -----
   /**
-   * Mock email + password login (US-01). Returns the user, or null when the
-   * email is unknown or the password is wrong. Every demo account uses DEMO_PASSWORD.
+   * Temporary local email + password login. Replace this with the backend auth
+   * call when authentication is connected.
    */
   login(email: string, password: string): User | null {
     const clean = email.trim().toLowerCase();
     const user = state.users.find((u) => u.email.toLowerCase() === clean);
-    if (!user || password !== DEMO_PASSWORD) return null;
+    if (!user || password !== LOCAL_PASSWORD) return null;
     setState({ ...state, sessionUserId: user.id });
     return user;
-  },
-  /** Demo tool: switch account without typing a password. */
-  switchUser(userId: string) {
-    if (!rules.findUser(state, userId)) return;
-    setState({ ...state, sessionUserId: userId });
   },
   logout() {
     setState({ ...state, sessionUserId: null });
@@ -100,8 +94,8 @@ export const demo = {
   checkEligibility(monumentId: string, playerId: string, position: PlayerPosition) {
     return rules.checkCaptureEligibility(state, monumentId, playerId, position, demoNow());
   },
-  startCapture(monumentId: string, playerId: string, position: PlayerPosition, simulated: boolean) {
-    const result = rules.startCapture(state, { monumentId, playerId, position, simulated }, demoNow());
+  startCapture(monumentId: string, playerId: string, position: PlayerPosition) {
+    const result = rules.startCapture(state, { monumentId, playerId, position }, demoNow());
     setState(result.state);
     return result.capture;
   },
@@ -123,42 +117,6 @@ export const demo = {
   },
   setMonumentActive(monumentId: string, active: boolean) {
     setState(rules.setMonumentActive(state, monumentId, active));
-  },
-
-  // ----- Demo tools -----
-  setLocation(location: SimulatedLocation) {
-    setState({ ...state, settings: { ...state.settings, location } });
-  },
-  /**
-   * Pretend the player is standing `offsetMeters` north of a monument.
-   * The default 12 m keeps distances realistic; a large offset demos "too far".
-   */
-  teleportTo(monument: Monument, accuracyMeters = 8, offsetMeters = 12) {
-    const far = offsetMeters > monument.captureRadiusMeters;
-    demo.setLocation({
-      mode: "simulated",
-      latitude: monument.latitude + offsetMeters / 111_320,
-      longitude: monument.longitude,
-      accuracyMeters,
-      label: `${far ? `${offsetMeters} m from` : "at"} ${monument.name}${accuracyMeters > 50 ? " (poor GPS)" : ""}`,
-      monumentId: far ? undefined : monument.id,
-    });
-  },
-  setCamera(camera: CameraMode) {
-    setState({ ...state, settings: { ...state.settings, camera } });
-  },
-  advanceClock(ms: number) {
-    setState({ ...state, settings: { ...state.settings, clockOffsetMs: state.settings.clockOffsetMs + ms } });
-  },
-  resetClock() {
-    setState({ ...state, settings: { ...state.settings, clockOffsetMs: 0 } });
-  },
-  /** Restores the seed data but keeps the current user signed in. */
-  reset() {
-    const fresh = createSeedState(Date.now());
-    const keep = rules.findUser(state, state.sessionUserId);
-    const users = keep && !fresh.users.some((u) => u.id === keep.id) ? [...fresh.users, keep] : fresh.users;
-    setState({ ...fresh, users, sessionUserId: keep?.id ?? null });
   },
 };
 

@@ -1,5 +1,5 @@
-// Native fallback: keeps demo data in memory for the app session.
-// (The demo targets the web build, where storage.web.ts persists to localStorage.)
+// Native fallback: keeps local data in memory for the app session.
+// The web implementation persists the same state to localStorage.
 let memory: string | null = null;
 
 export const demoStorage = {

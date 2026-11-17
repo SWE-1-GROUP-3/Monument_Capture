@@ -13,14 +13,15 @@ import {
   startCapture,
   submitCapturePhoto,
 } from "./rules";
-import { createSeedState, seedMonuments } from "./seed";
+import { seedMonuments } from "./seed";
+import { createPopulatedTestState as createSeedState } from "./testFixtures";
 
 const NOW = Date.UTC(2026, 10, 3, 17, 0, 0);
 const ARCH = { latitude: 40.7312, longitude: -73.9971 };
 const atArch = { ...ARCH, accuracyMeters: 8, timestampMs: Date.now() };
 
 function capturedAndPending(state = createSeedState(NOW), playerId = "u-priya") {
-  const started = startCapture(state, { monumentId: "washington-arch", playerId, position: atArch, simulated: true }, NOW);
+  const started = startCapture(state, { monumentId: "washington-arch", playerId, position: atArch }, NOW);
   const submitted = submitCapturePhoto(started.state, started.capture.id, "data:image/png;base64,x", NOW);
   return { state: submitted, captureId: started.capture.id };
 }
@@ -72,7 +73,7 @@ describe("capture checks run cheapest first", () => {
 
   it("does not create a capture record when a check fails", () => {
     const tooFar = { latitude: 40.74, longitude: -73.9971, accuracyMeters: 8, timestampMs: Date.now() };
-    expect(() => startCapture(state, { monumentId: "washington-arch", playerId: "u-priya", position: tooFar, simulated: false }, NOW))
+    expect(() => startCapture(state, { monumentId: "washington-arch", playerId: "u-priya", position: tooFar }, NOW))
       .toThrow(RuleError);
   });
 });
@@ -80,7 +81,7 @@ describe("capture checks run cheapest first", () => {
 describe("capture lifecycle", () => {
   it("moves in_progress → pending → approved and locks the monument", () => {
     const seed = createSeedState(NOW);
-    const started = startCapture(seed, { monumentId: "washington-arch", playerId: "u-priya", position: atArch, simulated: true }, NOW);
+    const started = startCapture(seed, { monumentId: "washington-arch", playerId: "u-priya", position: atArch }, NOW);
     expect(started.capture.status).toBe("in_progress");
 
     const pending = submitCapturePhoto(started.state, started.capture.id, "data:image/png;base64,x", NOW);
@@ -102,7 +103,7 @@ describe("capture lifecycle", () => {
   });
 
   it("requires a photo before submitting", () => {
-    const started = startCapture(createSeedState(NOW), { monumentId: "washington-arch", playerId: "u-priya", position: atArch, simulated: true }, NOW);
+    const started = startCapture(createSeedState(NOW), { monumentId: "washington-arch", playerId: "u-priya", position: atArch }, NOW);
     expect(() => submitCapturePhoto(started.state, started.capture.id, "", NOW)).toThrow("photo");
   });
 

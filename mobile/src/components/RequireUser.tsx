@@ -13,7 +13,7 @@ export function RequireUser({ role, children }: { role?: Role; children: (user: 
   if (role && user.role !== role) {
     return (
       <Screen title="Not available" back>
-        <Banner tone="warning">{`This screen is only for ${role}s. Switch account from Profile to use it.`}</Banner>
+        <Banner tone="warning">{`This screen is only available to ${role} accounts.`}</Banner>
       </Screen>
     );
   }

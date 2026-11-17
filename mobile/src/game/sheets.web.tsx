@@ -1,9 +1,8 @@
 // Bottom-sheet contents for the map home (web). Every value shown comes from
-// the demo store, its rules or the read-only selectors.
+// the local app store, its rules or the read-only selectors.
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 
-import { DemoTools } from "../components/DemoTools";
 import { LOCK_DURATION_MS, findMonument, formatTimeAgo, getHistoryFor, getHoldingsFor, getPendingQueue, getPlayerStats, getHold } from "../demo/rules";
 import { getCapturePosition, type PositionResult } from "../demo/location";
 import {
@@ -82,12 +81,10 @@ export function MonumentSheet({ monumentId, user, realLocation, now, justSubmitt
   const isPlayer = user.role === "player";
   const view = monument ? monumentView(state, monument, user.id, now) : null;
   const pending = monument ? getPendingCaptureFor(state, user.id, monument.id) : undefined;
-  const loc = state.settings.location;
-  const locKey = JSON.stringify(loc);
   const needsCheck = isPlayer && !!view && view.kind === "free" && !pending;
 
   // Run the existing capture checks (accuracy → distance → lock) whenever the
-  // monument, the player's position source or the monument's status changes.
+  // monument or the monument's status changes.
   useEffect(() => {
     if (!monument || !needsCheck) {
       setElig({ kind: "idle" });
@@ -106,7 +103,7 @@ export function MonumentSheet({ monumentId, user, realLocation, now, justSubmitt
     return () => {
       live = false;
     };
-  }, [monument?.id, needsCheck, locKey, user.id, monument]);
+  }, [monument?.id, needsCheck, user.id, monument]);
 
   if (!monument || !view) return <Empty title="Monument not found" body="It may have been removed." />;
 
@@ -157,14 +154,12 @@ export function MonumentSheet({ monumentId, user, realLocation, now, justSubmitt
     }
     if (elig.kind !== "result" || !elig.check.ok) return;
     try {
-      demo.startCapture(monument.id, user.id, elig.position.position, elig.position.simulated);
+      demo.startCapture(monument.id, user.id, elig.position.position);
       router.push("/capture");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not start the capture.");
     }
   };
-
-  const canTeleport = isPlayer && view.kind === "free" && !pending && !(loc.mode === "simulated" && loc.monumentId === monument.id);
 
   return (
     <div>
@@ -182,11 +177,6 @@ export function MonumentSheet({ monumentId, user, realLocation, now, justSubmitt
       </div>
       <button type="button" className="mc-cta" disabled={!enabled} onClick={onCta}>{cta}</button>
       <div className="mc-hint" aria-live="polite">{error ?? hint}</div>
-      {canTeleport ? (
-        <div className="mc-hint">
-          <button type="button" className="mc-small-btn" onClick={() => demo.teleportTo(monument)}>📍 Teleport here (demo)</button>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -233,19 +223,6 @@ export function ProfileSheet({ user, now }: { user: User; now: number }) {
         <Row label="Role" value={isModerator ? "Moderator" : "Player"} />
         <Row label="Email" value={user.email} />
         <Row label="Location" value={getLocationLabel(state)} />
-      </div>
-
-      <div className="mc-section">Switch account (demo)</div>
-      <div className="mc-sort" style={{ marginTop: 0 }}>
-        {state.users.map((u) => (
-          <button key={u.id} type="button" className={`mc-small-btn${u.id === user.id ? " on" : ""}`} onClick={() => demo.switchUser(u.id)}>
-            {u.name.split(" ")[0]} · {u.role === "moderator" ? "Mod" : "Player"}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ marginTop: 16 }}>
-        <DemoTools />
       </div>
 
       <button
@@ -417,7 +394,6 @@ export function QueueSheet({ now }: { now: number }) {
                   <b>{monumentIcon(monument)} {monument?.name ?? "Unknown monument"}</b>
                   <small>{player?.name ?? "Unknown player"} · {capture.distanceMeters} m · {formatTimeAgo(now - (capture.submittedAt ?? now))}</small>
                   {held?.status === "held" ? <small style={{ color: "#e8590c" }}>Now held by {held.holder.name}</small> : null}
-                  {capture.simulatedPosition ? <small>Simulated location</small> : null}
                 </div>
                 <span className="go">›</span>
               </li>

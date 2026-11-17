@@ -1,7 +1,7 @@
 // Map tiles for the home map.
 //
 // CARTO Voyager (the mockup's look) needs a free key since September 2026;
-// without one CARTO returns tiles stamped "API KEY REQUIRED". So the demo uses
+// without one CARTO returns tiles stamped "API KEY REQUIRED". The app uses
 // OpenStreetMap's standard tiles (no key) unless a CARTO key is configured:
 //   mobile/.env  →  EXPO_PUBLIC_CARTO_API_KEY=your_key
 // Get a free key (no account) at https://carto.com/basemaps/apikey/

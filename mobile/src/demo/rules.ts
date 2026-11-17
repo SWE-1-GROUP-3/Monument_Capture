@@ -1,4 +1,4 @@
-// All game rules for the demo, as pure functions over DemoState.
+// All game rules as pure functions over the local app state.
 // Nothing here touches React, storage or the device, so it is easy to test and
 // it is the part that moves to the backend (Supabase/Firebase functions) later.
 
@@ -178,7 +178,7 @@ export function checkCaptureEligibility(
 
 export function startCapture(
   state: DemoState,
-  input: { monumentId: string; playerId: string; position: PlayerPosition; simulated: boolean },
+  input: { monumentId: string; playerId: string; position: PlayerPosition },
   now: number,
 ): { state: DemoState; capture: Capture } {
   const check = checkCaptureEligibility(state, input.monumentId, input.playerId, input.position, now);
@@ -193,7 +193,6 @@ export function startCapture(
     status: "in_progress",
     distanceMeters: check.distanceMeters,
     accuracyMeters: Math.round(input.position.accuracyMeters ?? 0),
-    simulatedPosition: input.simulated,
     photoUri: "",
     startedAt: now,
     submittedAt: null,
@@ -224,7 +223,7 @@ export function getInProgressCapture(state: DemoState, playerId: string) {
  * Records a moderator decision. Approval locks the monument to the player.
  *
  * Concurrency: approval re-checks the lock before writing, so two approvals on
- * the same monument can only ever produce one holder. In this demo every update
+ * the same monument can only ever produce one holder. In the local store every update
  * is synchronous, so the check-then-write cannot interleave. In the real
  * backend this check must be a database constraint or transaction.
  */

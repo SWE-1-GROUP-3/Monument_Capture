@@ -1,5 +1,5 @@
-// Web: persists demo data in localStorage so it survives a page refresh.
-const KEY = "monument-capture-demo";
+// Web: persists local app data so it survives a page refresh.
+const KEY = "monument-capture-local-v1";
 
 export const demoStorage = {
   load(): string | null {

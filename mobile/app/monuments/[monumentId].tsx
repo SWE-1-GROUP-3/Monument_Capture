@@ -8,19 +8,21 @@ import { MonumentMap } from "../../src/components/map/MonumentMap";
 import { Banner, Button, Card, DetailRow, SectionTitle } from "../../src/components/ui";
 import { theme } from "../../src/constants/theme";
 import { findMonument, findUser, formatTimeAgo, reviewFor } from "../../src/demo/rules";
-import { demo, useDemoState } from "../../src/demo/store";
+import { useDemoState } from "../../src/demo/store";
 import { monumentView, toMapMonument } from "../../src/demo/views";
 import { useStatusTime } from "../../src/hooks/useStatusTime";
+import { usePlayerLocation } from "../../src/hooks/usePlayerLocation";
 import { formatLockTime } from "../../src/utils/formatLockTime";
 import { getMonumentAvailability } from "../../src/utils/monumentAvailability";
 
 // US-03 monument details (Yuming): status, holder and live lock countdown, with
-// "Back to map" in the header. Data comes from the shared demo store, and
+// "Back to map" in the header. Data comes from the shared local store, and
 // Start Capture is wired to the US-05 proximity check.
 export default function MonumentDetailsScreen() {
   const { monumentId } = useLocalSearchParams<{ monumentId?: string | string[] }>();
   const state = useDemoState();
   const nowMs = useStatusTime();
+  const { location } = usePlayerLocation();
 
   return (
     <RequireUser>
@@ -37,8 +39,6 @@ export default function MonumentDetailsScreen() {
         const heldByMe = availability.status === "locked" && !!mapMonument.hold?.heldByViewer;
         const appearance = availabilityAppearance[availability.status];
         const isPlayer = user.role === "player";
-        const sim = state.settings.location;
-        const simulatedHere = sim.mode === "simulated" && sim.monumentId === monument.id;
         const goCapture = () => router.push(`/capture?monumentId=${monument.id}`);
 
         const pastHolders = state.captures
@@ -83,7 +83,7 @@ export default function MonumentDetailsScreen() {
             <View style={styles.map}>
               <MonumentMap
                 monuments={[mapMonument]}
-                playerLocation={sim.mode === "simulated" ? sim : null}
+                playerLocation={location}
                 nowMs={nowMs}
                 height={220}
               />
@@ -94,25 +94,6 @@ export default function MonumentDetailsScreen() {
               <DetailRow label="Capture radius" value={`${monument.captureRadiusMeters} m`} />
               <DetailRow label="Coordinates" value={`${monument.latitude.toFixed(4)}, ${monument.longitude.toFixed(4)}`} />
             </Card>
-
-            {isPlayer && monument.active ? (
-              <Card style={{ borderStyle: "dashed" }}>
-                <Text style={styles.demoLabel}>DEMO TOOL</Text>
-                <Text style={styles.description}>
-                  {simulatedHere
-                    ? "Your simulated location is at this monument. Start the capture to check in."
-                    : "Not standing here? Pretend you are, so the capture check passes during the demo."}
-                </Text>
-                <Button
-                  compact
-                  variant="ghost"
-                  icon="locate"
-                  label={simulatedHere ? "Simulated location is here" : "Teleport here (demo)"}
-                  disabled={simulatedHere}
-                  onPress={() => demo.teleportTo(monument)}
-                />
-              </Card>
-            ) : null}
 
             <SectionTitle>Recent holders</SectionTitle>
             {pastHolders.length === 0 ? (
@@ -143,7 +124,6 @@ const styles = StyleSheet.create({
   explanation: { color: theme.colors.muted, lineHeight: 21 },
   map: { borderColor: theme.colors.border, borderRadius: theme.radius.medium, borderWidth: 1, overflow: "hidden" },
   description: { color: theme.colors.text, lineHeight: 21 },
-  demoLabel: { color: theme.colors.muted, fontSize: 11, fontWeight: "800", letterSpacing: 1 },
   row: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
   rowTitle: { color: theme.colors.text, fontWeight: "700" },
 });

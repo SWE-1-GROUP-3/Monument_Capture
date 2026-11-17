@@ -3,7 +3,8 @@ import * as Location from "expo-location";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createSeedState } from "../../demo/seed";
-import { demo, getDemoState, __setDemoStateForTests } from "../../demo/store";
+import { createPopulatedTestState } from "../../demo/testFixtures";
+import { __setDemoStateForTests } from "../../demo/store";
 import { LOCATION_REQUEST_TIMEOUT_MS, useCaptureEligibility } from "./useCaptureEligibility";
 
 vi.mock("expo-location", () => ({
@@ -18,7 +19,7 @@ const grantedPermission = { status: "granted" } as Location.LocationPermissionRe
 describe("capture eligibility location flow", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    __setDemoStateForTests(createSeedState(Date.now()));
+    __setDemoStateForTests(createPopulatedTestState(Date.now()));
   });
 
   afterEach(() => vi.useRealTimers());
@@ -100,42 +101,6 @@ describe("capture eligibility location flow", () => {
 
     expect(result.current.state.status).toBe("locked");
     expect(result.current.state.message).toContain("Sam Chen");
-  });
-
-  it("uses the simulated position from Demo tools without asking the device", async () => {
-    demo.setLocation({ mode: "simulated", ...arch, accuracyMeters: 5, label: "test" });
-    const { result } = renderHook(() => useCaptureEligibility("washington-arch", "u-priya"));
-
-    await act(() => result.current.verify());
-
-    expect(result.current.state.status).toBe("eligible");
-    expect(result.current.checked?.simulated).toBe(true);
-    expect(Location.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
-    expect(getDemoState().settings.location.mode).toBe("simulated");
-  });
-
-  it("shows the permission error when Demo tools simulate a denied location", async () => {
-    demo.setLocation({ mode: "denied" });
-    const { result } = renderHook(() => useCaptureEligibility("washington-arch", "u-priya"));
-    await act(() => result.current.verify());
-    expect(result.current.state.status).toBe("permission-denied");
-    expect(Location.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
-  });
-
-  it("shows the unavailable error when Demo tools simulate GPS being off", async () => {
-    demo.setLocation({ mode: "unavailable" });
-    const { result } = renderHook(() => useCaptureEligibility("washington-arch", "u-priya"));
-    await act(() => result.current.verify());
-    expect(result.current.state.status).toBe("unavailable");
-  });
-
-  it("reports a too-far error after teleporting 400 m away", async () => {
-    const monument = getDemoState().monuments.find((item) => item.id === "washington-arch")!;
-    demo.teleportTo(monument, 8, 400);
-    const { result } = renderHook(() => useCaptureEligibility("washington-arch", "u-priya"));
-    await act(() => result.current.verify());
-    expect(result.current.state.status).toBe("outside");
-    expect(result.current.state.distanceMeters).toBe(400);
   });
 
   it("rejects a cached location even when its coordinates are inside the radius", async () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { LOCK_DURATION_MS, reviewCapture, startCapture, submitCapturePhoto } from "./rules";
-import { createSeedState } from "./seed";
+import { createPopulatedTestState as createSeedState } from "./testFixtures";
 import {
   formatDuration,
   getAreaName,
@@ -26,15 +26,11 @@ const records = (state: DemoState = createSeedState(NOW)) => getPlayerRecords(st
 const rec = (id: string, state?: DemoState) => records(state).find((r) => r.monument.id === id)!;
 
 describe("position and range", () => {
-  it("uses the demo override, else the real fix, else nothing", () => {
+  it("uses the real fix when available", () => {
     const state = createSeedState(NOW);
     expect(getEffectivePosition(state, null)).toBeNull();
-    expect(getEffectivePosition(state, { latitude: 1, longitude: 2 })).toMatchObject({ simulated: false, label: "Live GPS" });
-    state.settings.location = { mode: "simulated", latitude: 40.7, longitude: -74, accuracyMeters: 8, label: "at X" };
-    expect(getEffectivePosition(state, { latitude: 1, longitude: 2 })).toMatchObject({ latitude: 40.7, simulated: true });
-    state.settings.location = { mode: "denied" };
-    expect(getEffectivePosition(state, { latitude: 1, longitude: 2 })).toBeNull();
-    expect(getLocationLabel(state)).toBe("Simulated: permission denied");
+    expect(getEffectivePosition(state, { latitude: 1, longitude: 2 })).toMatchObject({ latitude: 1, longitude: 2, label: "Live GPS" });
+    expect(getLocationLabel(state)).toBe("Live GPS");
   });
 
   it("counts monuments in range using each monument's capture radius", () => {
@@ -58,7 +54,7 @@ describe("identity and level", () => {
 
   it("level is 1 + floor(approved captures / 2)", () => {
     expect(getPlayerLevel(createSeedState(NOW), "u-alex")).toBe(4); // 7 approved
-    expect(getPlayerLevel(createSeedState(NOW), "u-demo")).toBe(1); // none
+    expect(getPlayerLevel(createSeedState(NOW), "u-morgan")).toBe(1); // none
   });
 });
 
@@ -119,13 +115,13 @@ describe("records", () => {
   it("totals: times held, hold time and approval rate", () => {
     const t = getRecordTotals(createSeedState(NOW), "u-alex", NOW);
     expect(t).toMatchObject({ timesHeld: 7, approved: 7, submitted: 10, approvalRate: 0.7 });
-    expect(getRecordTotals(createSeedState(NOW), "u-demo", NOW)).toMatchObject({ timesHeld: 0, submitted: 0, approvalRate: 0 });
+    expect(getRecordTotals(createSeedState(NOW), "u-morgan", NOW)).toMatchObject({ timesHeld: 0, submitted: 0, approvalRate: 0 });
   });
 
   it("a newly approved capture shows up in records", () => {
     let state = createSeedState(NOW);
     const at = { latitude: 40.7056, longitude: -74.0134, accuracyMeters: 5, timestampMs: Date.now() };
-    const started = startCapture(state, { monumentId: "farragut", playerId: "u-alex", position: { ...at, latitude: 40.7426, longitude: -73.9878 }, simulated: true }, NOW);
+    const started = startCapture(state, { monumentId: "farragut", playerId: "u-alex", position: { ...at, latitude: 40.7426, longitude: -73.9878 } }, NOW);
     state = submitCapturePhoto(started.state, started.capture.id, "data:x", NOW);
     expect(rec("farragut", state)).toMatchObject({ holds: 0, attempts: 1 });
     state = reviewCapture(state, { captureId: started.capture.id, moderatorId: "u-morgan", decision: "approved", reason: "" }, NOW);

@@ -7,7 +7,7 @@ import { createSeedState } from "../demo/seed";
 import type { DemoState, Monument } from "../demo/types";
 import { BackToMapButton } from "./BackToMapButton";
 
-// US-03 details tests (originally by Yuming), now reading the shared demo store.
+// US-03 details tests reading the shared local store.
 const route = vi.hoisted(() => ({
   monumentId: "locked" as string | string[] | undefined,
   canGoBack: vi.fn(() => true), back: vi.fn(), replace: vi.fn(), push: vi.fn(),
@@ -15,6 +15,9 @@ const route = vi.hoisted(() => ({
 vi.mock("react-native", () => vi.importActual("react-native-web"));
 vi.mock("@expo/vector-icons", () => ({ Ionicons: () => null }));
 vi.mock("./map/MonumentMap", () => ({ MonumentMap: () => null }));
+vi.mock("../hooks/usePlayerLocation", () => ({
+  usePlayerLocation: () => ({ location: null, message: "", loading: false, locate: vi.fn() }),
+}));
 vi.mock("./Screen", () => ({ Screen: ({ children, title, subtitle }: PropsWithChildren<{ title: string; subtitle?: string }>) => (
   <div><h1>{title}</h1>{subtitle ? <p>{subtitle}</p> : null}{children}</div>
 ) }));
@@ -35,7 +38,7 @@ function world(): DemoState {
   const base = createSeedState(NOW);
   const held = (monumentId: string, lockedUntil: number) => ({
     capture: { id: `c-${monumentId}`, monumentId, playerId: "u-sam", status: "approved" as const, distanceMeters: 5,
-      accuracyMeters: 5, simulatedPosition: false, photoUri: "x", startedAt: NOW - 1, submittedAt: NOW - 1 },
+      accuracyMeters: 5, photoUri: "x", startedAt: NOW - 1, submittedAt: NOW - 1 },
     review: { id: `r-${monumentId}`, captureId: `c-${monumentId}`, moderatorId: "u-morgan", decision: "approved" as const,
       reason: "ok", reviewedAt: NOW - 1, lockedUntil },
   });

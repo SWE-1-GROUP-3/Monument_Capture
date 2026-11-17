@@ -1,7 +1,7 @@
 import { act, fireEvent, cleanup, render, screen } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
 import { afterEach, expect, it, vi } from "vitest";
-import { mapMonuments } from "../../data/mapMonuments";
+import { mapMonuments } from "../../testing/mapMonuments";
 import type { MapCoordinate } from "../../types/mapMonument";
 import { MonumentMap } from "./MonumentMap";
 

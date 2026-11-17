@@ -1,8 +1,10 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import * as Location from "expo-location";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
-import { __setDemoStateForTests, demo, getDemoState } from "../demo/store";
+import { __setDemoStateForTests, getDemoState } from "../demo/store";
 import { createSeedState } from "../demo/seed";
+import { createPopulatedTestState } from "../demo/testFixtures";
 import { GameHome } from "./GameHome.web";
 
 // The map home replaces the old Explore tab, so the US-02 checks from its test
@@ -24,6 +26,18 @@ const deny = () => {
   return getCurrentPosition;
 };
 
+const locateAt = (latitude: number, longitude: number) => {
+  const getCurrentPosition = vi.fn((ok: (position: { coords: { latitude: number; longitude: number } }) => void) =>
+    ok({ coords: { latitude, longitude } }));
+  Object.defineProperty(navigator, "geolocation", { configurable: true, value: { getCurrentPosition } });
+  vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue({ status: "granted" } as Location.LocationPermissionResponse);
+  vi.mocked(Location.getCurrentPositionAsync).mockResolvedValue({
+    coords: { latitude, longitude, accuracy: 8 },
+    timestamp: Date.now(),
+  } as Location.LocationObject);
+  return getCurrentPosition;
+};
+
 function renderAs(userId: string) {
   __setDemoStateForTests({ ...getDemoState(), sessionUserId: userId });
   const user = getDemoState().users.find((u) => u.id === userId)!;
@@ -31,7 +45,8 @@ function renderAs(userId: string) {
 }
 
 beforeEach(() => {
-  __setDemoStateForTests(createSeedState(Date.now()));
+  vi.clearAllMocks();
+  __setDemoStateForTests(createPopulatedTestState(Date.now()));
   router.push.mockClear();
 });
 afterEach(cleanup);
@@ -56,22 +71,22 @@ it("colours pins by status: free, held by someone else, held by me", () => {
   expect(container.querySelectorAll(".mc-mon.free").length).toBeGreaterThan(5);
 });
 
-it("puts the player, the capture ring and the in-range count on the map from the demo location", () => {
-  deny();
+it("puts the player, the capture ring and the in-range count on the map from device location", async () => {
   const arch = getDemoState().monuments.find((m) => m.id === "washington-arch")!;
-  act(() => demo.teleportTo(arch));
+  locateAt(arch.latitude + 12 / 111_320, arch.longitude);
   const { container } = renderAs("u-alex");
-  expect(container.querySelector(".mc-me .body")?.textContent).toBe("AR");
+  await screen.findByText("1 monument in range");
+  await waitFor(() => expect(container.querySelector(".mc-me .body")?.textContent).toBe("AR"));
   expect(container.querySelector("path.leaflet-interactive")).toBeTruthy();
   expect(screen.getByText("1 monument in range")).toBeTruthy();
   expect(screen.getByText("Greenwich Village")).toBeTruthy();
 });
 
 it("opens the monument sheet with an enabled Capture when free and in range", async () => {
-  deny();
   const arch = getDemoState().monuments.find((m) => m.id === "washington-arch")!;
-  act(() => demo.teleportTo(arch));
+  locateAt(arch.latitude + 12 / 111_320, arch.longitude);
   renderAs("u-alex");
+  await screen.findByText("1 monument in range");
   fireEvent.click(screen.getByTitle(/^Washington Square Arch:/));
   const sheet = screen.getByLabelText("Monument");
   expect(within(sheet).getByText("Free to claim")).toBeTruthy();
@@ -85,9 +100,8 @@ it("opens the monument sheet with an enabled Capture when free and in range", as
 });
 
 it("disables Capture with a distance hint when out of range", async () => {
-  deny();
   const arch = getDemoState().monuments.find((m) => m.id === "washington-arch")!;
-  act(() => demo.teleportTo(arch, 8, 400));
+  locateAt(arch.latitude + 400 / 111_320, arch.longitude);
   renderAs("u-alex");
   fireEvent.click(screen.getByTitle(/^Washington Square Arch:/));
   const sheet = screen.getByLabelText("Monument");
@@ -144,7 +158,8 @@ it("player bar: Profile with level, Records with all-time stats, Activity with h
 
 it("Records shows an empty state with no history", () => {
   deny();
-  renderAs("u-demo");
+  __setDemoStateForTests(createSeedState(Date.now()));
+  renderAs("u-alex");
   fireEvent.click(screen.getByText("Records"));
   expect(within(screen.getByLabelText("Records")).getByText("No records yet.")).toBeTruthy();
 });

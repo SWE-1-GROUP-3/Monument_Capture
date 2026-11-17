@@ -4,14 +4,14 @@ import { useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
 
 import { Screen } from "../src/components/Screen";
-import { Banner, Button, Card, Chip, DetailRow, Pill, SectionTitle } from "../src/components/ui";
+import { Banner, Button, Card, DetailRow, Pill, SectionTitle } from "../src/components/ui";
 import { theme } from "../src/constants/theme";
 import { pickPhoto } from "../src/demo/photo";
 import { CameraPanel } from "../src/components/camera/CameraPanel";
 import { returnToMap } from "../src/game/homeIntent";
 import { findMonument, getInProgressCapture } from "../src/demo/rules";
 import { demo, useCurrentUser, useDemoState, useNow } from "../src/demo/store";
-import type { CameraMode, Capture, Monument, SimulatedLocation, User } from "../src/demo/types";
+import type { Capture, Monument, User } from "../src/demo/types";
 import { monumentView, monumentViews } from "../src/demo/views";
 import type { CaptureCheckState } from "../src/features/capture/types";
 import { useCaptureEligibility } from "../src/features/capture/useCaptureEligibility";
@@ -40,7 +40,7 @@ export default function CaptureScreen() {
   if (user.role !== "player") {
     return (
       <Screen title="Capture">
-        <Banner tone="warning">Only players capture monuments. Switch to a player account from Profile.</Banner>
+        <Banner tone="warning">Only player accounts can capture monuments.</Banner>
       </Screen>
     );
   }
@@ -108,29 +108,17 @@ function CheckStep({ monument, user }: { monument: Monument; user: User }) {
   const { state: check, verify, reset, checked } = useCaptureEligibility(monument.id, user.id);
   const [error, setError] = useState<string | null>(null);
   const view = monumentView(state, monument, user.id, now);
-  const sim = state.settings.location;
   const isChecking = check.status === "checking";
   const isEligible = check.status === "eligible" && checked;
 
   const start = () => {
     if (!checked) return;
     try {
-      demo.startCapture(monument.id, user.id, checked.position, checked.simulated);
+      demo.startCapture(monument.id, user.id, checked.position);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not start the capture.");
       reset();
     }
-  };
-
-  const teleport = (accuracyMeters: number, offsetMeters?: number) => {
-    demo.teleportTo(monument, accuracyMeters, offsetMeters);
-    setError(null);
-    reset();
-  };
-  const setLoc = (location: SimulatedLocation) => {
-    demo.setLocation(location);
-    setError(null);
-    reset();
   };
 
   return (
@@ -173,34 +161,8 @@ function CheckStep({ monument, user }: { monument: Monument; user: User }) {
           disabled={isChecking}
         />
       )}
-
-      <Card style={styles.demoCard}>
-        <Text style={styles.demoLabel}>DEMO LOCATION</Text>
-        <Text style={styles.statusMessage}>{locationSummary(sim)}</Text>
-        <Text style={styles.demoHint}>Works:</Text>
-        <View style={styles.demoButtons}>
-          <Button compact variant="ghost" icon="locate" label="Teleport here" onPress={() => teleport(8)} />
-          {sim.mode !== "real" ? <Button compact variant="ghost" icon="navigate-outline" label="Use real GPS" onPress={() => setLoc({ mode: "real" })} /> : null}
-        </View>
-        <Text style={styles.demoHint}>Show an error:</Text>
-        <View style={styles.demoButtons}>
-          <Button compact variant="ghost" icon="cellular-outline" label="Poor GPS" onPress={() => teleport(120)} />
-          <Button compact variant="ghost" icon="walk-outline" label="400 m away" onPress={() => teleport(8, 400)} />
-          <Button compact variant="ghost" icon="lock-closed-outline" label="Location denied" onPress={() => setLoc({ mode: "denied" })} />
-          <Button compact variant="ghost" icon="cloud-offline-outline" label="GPS unavailable" onPress={() => setLoc({ mode: "unavailable" })} />
-        </View>
-      </Card>
     </Screen>
   );
-}
-
-function locationSummary(sim: SimulatedLocation) {
-  switch (sim.mode) {
-    case "simulated": return `Using a simulated position ${sim.label} (±${sim.accuracyMeters} m).`;
-    case "denied": return "Simulating: the player refused location permission.";
-    case "unavailable": return "Simulating: location services are off or timed out.";
-    default: return "Using your real GPS. Indoors or on a laptop this is usually too inaccurate to pass.";
-  }
 }
 
 function statusTitle(status: CaptureCheckState["status"]) {
@@ -225,8 +187,6 @@ function PhotoStep({ capture, monument, onSubmitted }: { capture: Capture; monum
   const [photo, setPhoto] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const camera = useDemoState().settings.camera;
 
   const upload = async () => {
     setError(null);
@@ -256,7 +216,6 @@ function PhotoStep({ capture, monument, onSubmitted }: { capture: Capture; monum
       <Card>
         <DetailRow label="Distance at check-in" value={`${capture.distanceMeters} m of ${monument.captureRadiusMeters} m`} />
         <DetailRow label="GPS accuracy" value={`±${capture.accuracyMeters} m`} />
-        {capture.simulatedPosition ? <DetailRow label="Position source" value="Simulated (demo)" tone="warning" /> : null}
       </Card>
 
       {photo ? (
@@ -274,32 +233,9 @@ function PhotoStep({ capture, monument, onSubmitted }: { capture: Capture; monum
       {error ? <Banner tone="danger" title="Couldn't use that photo">{error}</Banner> : null}
       <Button label="Submit for review" icon="send" onPress={submit} disabled={!photo || busy} />
       <Button label="Cancel capture" variant="ghost" onPress={() => { demo.cancelCapture(capture.id); returnToMap({ monumentId: monument.id }); }} />
-
-      <Card style={styles.demoCard}>
-        <Text style={styles.demoLabel}>DEMO CAMERA</Text>
-        <Text style={styles.statusMessage}>{cameraSummary[camera]}</Text>
-        <View style={styles.demoButtons}>
-          {(Object.keys(cameraSummary) as CameraMode[]).map((m) => (
-            <Chip key={m} label={cameraLabel[m]} selected={camera === m} onPress={() => demo.setCamera(m)} />
-          ))}
-        </View>
-      </Card>
     </Screen>
   );
 }
-
-const cameraLabel: Record<CameraMode, string> = {
-  real: "Real camera",
-  denied: "Permission denied",
-  missing: "No camera",
-  busy: "Camera in use",
-};
-const cameraSummary: Record<CameraMode, string> = {
-  real: "Using this device's real camera.",
-  denied: "Simulating: the player blocked camera access.",
-  missing: "Simulating: a device with no camera.",
-  busy: "Simulating: another app is using the camera.",
-};
 
 // ---------- Step 4: done ----------
 
@@ -345,10 +281,6 @@ const styles = StyleSheet.create({
   eligibleCard: { backgroundColor: theme.colors.primarySoft, borderColor: theme.colors.primary },
   statusTitle: { color: theme.colors.text, fontSize: 17, fontWeight: "800" },
   statusMessage: { color: theme.colors.muted, lineHeight: 20, marginTop: 2 },
-  demoCard: { borderStyle: "dashed" },
-  demoLabel: { color: theme.colors.muted, fontSize: 11, fontWeight: "800", letterSpacing: 1 },
-  demoButtons: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.small },
-  demoHint: { color: theme.colors.muted, fontSize: 13, marginTop: 2 },
   preview: { aspectRatio: 4 / 3, borderRadius: theme.radius.medium, width: "100%" },
   placeholder: {
     alignItems: "center",

@@ -9,28 +9,17 @@ type LatLng = { latitude: number; longitude: number };
 
 // ---------- Position and range ----------
 
-export type EffectivePosition = LatLng & { simulated: boolean; label: string };
+export type EffectivePosition = LatLng & { label: string };
 
 /**
- * Where the player is for the UI: the Demo tools override when set, otherwise
- * the real device fix (if one was granted).
+ * The player's latest real device fix, when location permission was granted.
  */
-export function getEffectivePosition(state: DemoState, realLocation: LatLng | null | undefined): EffectivePosition | null {
-  const loc = state.settings.location;
-  if (loc.mode === "simulated") return { latitude: loc.latitude, longitude: loc.longitude, simulated: true, label: loc.label };
-  if (loc.mode === "real" && realLocation) return { ...realLocation, simulated: false, label: "Live GPS" };
-  return null;
+export function getEffectivePosition(_state: DemoState, realLocation: LatLng | null | undefined): EffectivePosition | null {
+  return realLocation ? { ...realLocation, label: "Live GPS" } : null;
 }
 
 /** Human label for the profile's Location row. */
-export function getLocationLabel(state: DemoState): string {
-  const loc = state.settings.location;
-  if (loc.mode === "simulated") {
-    const m = findMonument(state, loc.monumentId);
-    return m ? `Simulated: ${m.name}` : `Simulated: ${loc.label.replace(/^at /, "")}`;
-  }
-  if (loc.mode === "denied") return "Simulated: permission denied";
-  if (loc.mode === "unavailable") return "Simulated: GPS unavailable";
+export function getLocationLabel(_state: DemoState): string {
   return "Live GPS";
 }
 

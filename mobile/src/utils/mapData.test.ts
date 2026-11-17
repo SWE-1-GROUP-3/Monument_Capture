@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapMonuments } from "../data/mapMonuments";
+import { mapMonuments } from "../testing/mapMonuments";
 import { getValidMonuments, isValidCoordinate } from "./mapData";
 
 describe("map data validation", () => {
