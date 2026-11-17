@@ -11,3 +11,9 @@ REVOKE ALL ON SCHEMA app FROM PUBLIC;
 ALTER DEFAULT PRIVILEGES FOR ROLE :"migration_role" IN SCHEMA app
     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO :"application_role";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA app TO :"application_role";
+-- Supabase installs PostGIS in extensions; local PostgreSQL may use public.
+-- Grant access to the actual extension schema without exposing gameplay tables.
+SELECT format('GRANT USAGE ON SCHEMA %I TO %I, %I', n.nspname, :'migration_role', :'application_role')
+FROM pg_extension e JOIN pg_namespace n ON n.oid = e.extnamespace
+WHERE e.extname = 'postgis'
+\gexec
