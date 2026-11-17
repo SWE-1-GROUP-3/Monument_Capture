@@ -9,6 +9,20 @@ Monument Capture is a mobile game where players discover nearby monuments, verif
 
 The frontend currently uses a temporary local store and local authentication so the implemented app flows remain usable before the backend and database are connected. It starts with a clean capture/review history and contains no presentation controls or fabricated activity.
 
+## Current MVP documentation
+
+- [MVP decisions](docs/mvp-decisions.md) — agreed scope and gameplay rules.
+- [Backend, schema, and API contract](docs/backend-schema-api-contract.md) — proposed schema, interfaces, and remaining technical decisions.
+- [Implementation plan](docs/implementation-plan.md) — task order, dependencies, owners, status, and acceptance conditions.
+- [Current MVP Requirements](https://docs.google.com/document/d/1H2VGk9Opk9Qfs1-GMGAfWHScByrwF-YYS534Mgal1w0/edit)
+- [Current MVP Design](https://docs.google.com/document/d/1Fl15HPBlyXUN6gXmj8ybehIFlhytORZeH_qnRWcB1TI/edit)
+
+These documents describe intended MVP behavior, not completed backend functionality. The backend currently exposes only the health endpoint.
+
+Database/photo hosting and authentication provider/session selection remain pending. The schema/API proposal and task ownership need team review.
+
+For the upcoming sprint, the frontend and backend can run locally with shared database/storage connections. Public deployment is deferred.
+
 ## Prerequisites
 
 - Node.js 22.13+ (22.x), 24.3+ (24.x), or 26+, with npm
