@@ -17,7 +17,7 @@ import { createSeedState, seedMonuments } from "./seed";
 
 const NOW = Date.UTC(2026, 10, 3, 17, 0, 0);
 const ARCH = { latitude: 40.7312, longitude: -73.9971 };
-const atArch = { ...ARCH, accuracyMeters: 8 };
+const atArch = { ...ARCH, accuracyMeters: 8, timestampMs: Date.now() };
 
 function capturedAndPending(state = createSeedState(NOW), playerId = "u-priya") {
   const started = startCapture(state, { monumentId: "washington-arch", playerId, position: atArch, simulated: true }, NOW);
@@ -47,17 +47,17 @@ describe("capture checks run cheapest first", () => {
   const state = createSeedState(NOW);
 
   it("rejects poor GPS accuracy before measuring distance", () => {
-    const far = { latitude: 0, longitude: 0, accuracyMeters: 200 };
+    const far = { latitude: 0, longitude: 0, accuracyMeters: 200, timestampMs: Date.now() };
     expect(checkCaptureEligibility(state, "washington-arch", "u-priya", far, NOW)).toMatchObject({ ok: false, code: "inaccurate" });
   });
 
   it("rejects players outside the radius", () => {
-    const tooFar = { latitude: 40.74, longitude: -73.9971, accuracyMeters: 8 };
+    const tooFar = { latitude: 40.74, longitude: -73.9971, accuracyMeters: 8, timestampMs: Date.now() };
     expect(checkCaptureEligibility(state, "washington-arch", "u-priya", tooFar, NOW)).toMatchObject({ ok: false, code: "outside" });
   });
 
   it("rejects locked monuments even when the player is standing there", () => {
-    const atBethesda = { latitude: 40.7744, longitude: -73.9703, accuracyMeters: 8 };
+    const atBethesda = { latitude: 40.7744, longitude: -73.9703, accuracyMeters: 8, timestampMs: Date.now() };
     expect(checkCaptureEligibility(state, "bethesda", "u-priya", atBethesda, NOW)).toMatchObject({ ok: false, code: "locked" });
   });
 
@@ -71,7 +71,7 @@ describe("capture checks run cheapest first", () => {
   });
 
   it("does not create a capture record when a check fails", () => {
-    const tooFar = { latitude: 40.74, longitude: -73.9971, accuracyMeters: 8 };
+    const tooFar = { latitude: 40.74, longitude: -73.9971, accuracyMeters: 8, timestampMs: Date.now() };
     expect(() => startCapture(state, { monumentId: "washington-arch", playerId: "u-priya", position: tooFar, simulated: false }, NOW))
       .toThrow(RuleError);
   });
@@ -148,7 +148,7 @@ describe("seeded error cases", () => {
   });
 
   it("refuses a player trying to capture a monument they already hold", () => {
-    const atLiberty = { latitude: 40.6892, longitude: -74.0445, accuracyMeters: 8 };
+    const atLiberty = { latitude: 40.6892, longitude: -74.0445, accuracyMeters: 8, timestampMs: Date.now() };
     expect(checkCaptureEligibility(createSeedState(NOW), "liberty", "u-alex", atLiberty, NOW))
       .toMatchObject({ ok: false, code: "locked", message: expect.stringContaining("Held by you") });
   });

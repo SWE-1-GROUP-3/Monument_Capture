@@ -107,7 +107,7 @@ export function getPlayerStats(state: DemoState, playerId: string, now: number) 
 
 export type CaptureCheck =
   | { ok: true; distanceMeters: number }
-  | { ok: false; code: "inactive" | "inaccurate" | "outside" | "locked" | "duplicate"; message: string; distanceMeters?: number };
+  | { ok: false; code: "inactive" | "stale" | "inaccurate" | "outside" | "locked" | "duplicate"; message: string; distanceMeters?: number };
 
 /**
  * The capture checks, cheapest first: GPS accuracy, distance to the monument,
@@ -127,6 +127,13 @@ export function checkCaptureEligibility(
   }
 
   const proximity = evaluateCaptureProximity(monument, position);
+  if (proximity.status === "stale") {
+    return {
+      ok: false,
+      code: "stale",
+      message: "The location result was too old to verify your visit. Retry for a current location.",
+    };
+  }
   if (proximity.status === "inaccurate") {
     return {
       ok: false,

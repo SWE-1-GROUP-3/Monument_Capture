@@ -10,12 +10,14 @@ export type PlayerPosition = {
   latitude: number;
   longitude: number;
   accuracyMeters: number | null;
+  timestampMs: number;
 };
 
 export type ProximityEvaluation =
   | { status: "eligible"; distanceMeters: number }
   | { status: "outside"; distanceMeters: number; metersToMoveCloser: number }
-  | { status: "inaccurate" };
+  | { status: "inaccurate" }
+  | { status: "stale" };
 
 export type CaptureCheckState = {
   status:
@@ -24,6 +26,7 @@ export type CaptureCheckState = {
     | "eligible"
     | "outside"
     | "inaccurate"
+    | "stale"
     | "locked"
     | "duplicate"
     | "inactive"

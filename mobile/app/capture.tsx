@@ -22,6 +22,7 @@ const statusIcon = {
   eligible: "checkmark-circle-outline",
   outside: "walk-outline",
   inaccurate: "refresh-outline",
+  stale: "time-outline",
   locked: "lock-closed-outline",
   duplicate: "hourglass-outline",
   inactive: "ban-outline",
@@ -207,6 +208,7 @@ function statusTitle(status: CaptureCheckState["status"]) {
     case "eligible": return "You're in range";
     case "outside": return "Too far away";
     case "inaccurate": return "Location not accurate enough";
+    case "stale": return "Current location required";
     case "locked": return "Monument is locked";
     case "duplicate": return "Already submitted";
     case "inactive": return "Not available";

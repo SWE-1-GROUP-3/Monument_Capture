@@ -1,10 +1,10 @@
 import { act, renderHook } from "@testing-library/react";
 import * as Location from "expo-location";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { demo, getDemoState, __setDemoStateForTests } from "../../demo/store";
 import { createSeedState } from "../../demo/seed";
-import { useCaptureEligibility } from "./useCaptureEligibility";
+import { demo, getDemoState, __setDemoStateForTests } from "../../demo/store";
+import { LOCATION_REQUEST_TIMEOUT_MS, useCaptureEligibility } from "./useCaptureEligibility";
 
 vi.mock("expo-location", () => ({
   requestForegroundPermissionsAsync: vi.fn(),
@@ -20,6 +20,8 @@ describe("capture eligibility location flow", () => {
     vi.resetAllMocks();
     __setDemoStateForTests(createSeedState(Date.now()));
   });
+
+  afterEach(() => vi.useRealTimers());
 
   it("does not request coordinates after location permission is denied", async () => {
     vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue({
@@ -37,6 +39,7 @@ describe("capture eligibility location flow", () => {
     vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue(grantedPermission);
     vi.mocked(Location.getCurrentPositionAsync).mockResolvedValue({
       coords: { latitude: arch.latitude, longitude: arch.longitude, accuracy: 8 },
+      timestamp: Date.now(),
     } as Location.LocationObject);
     const { result } = renderHook(() => useCaptureEligibility("washington-arch", "u-priya"));
 
@@ -50,6 +53,7 @@ describe("capture eligibility location flow", () => {
     vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue(grantedPermission);
     vi.mocked(Location.getCurrentPositionAsync).mockResolvedValue({
       coords: { latitude: 40.74, longitude: -74.01, accuracy: 10 },
+      timestamp: Date.now(),
     } as Location.LocationObject);
     const { result } = renderHook(() => useCaptureEligibility("washington-arch", "u-priya"));
 
@@ -63,6 +67,7 @@ describe("capture eligibility location flow", () => {
     vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue(grantedPermission);
     vi.mocked(Location.getCurrentPositionAsync).mockResolvedValue({
       coords: { latitude: arch.latitude, longitude: arch.longitude, accuracy: 80 },
+      timestamp: Date.now(),
     } as Location.LocationObject);
     const { result } = renderHook(() => useCaptureEligibility("washington-arch", "u-priya"));
 
@@ -87,6 +92,7 @@ describe("capture eligibility location flow", () => {
     vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue(grantedPermission);
     vi.mocked(Location.getCurrentPositionAsync).mockResolvedValue({
       coords: { latitude: 40.7744, longitude: -73.9703, accuracy: 8 },
+      timestamp: Date.now(),
     } as Location.LocationObject);
     const { result } = renderHook(() => useCaptureEligibility("bethesda", "u-priya"));
 
@@ -124,11 +130,41 @@ describe("capture eligibility location flow", () => {
   });
 
   it("reports a too-far error after teleporting 400 m away", async () => {
-    const arch = getDemoState().monuments.find((m) => m.id === "washington-arch")!;
-    demo.teleportTo(arch, 8, 400);
+    const monument = getDemoState().monuments.find((item) => item.id === "washington-arch")!;
+    demo.teleportTo(monument, 8, 400);
     const { result } = renderHook(() => useCaptureEligibility("washington-arch", "u-priya"));
     await act(() => result.current.verify());
     expect(result.current.state.status).toBe("outside");
     expect(result.current.state.distanceMeters).toBe(400);
+  });
+
+  it("rejects a cached location even when its coordinates are inside the radius", async () => {
+    vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue(grantedPermission);
+    vi.mocked(Location.getCurrentPositionAsync).mockResolvedValue({
+      coords: { latitude: arch.latitude, longitude: arch.longitude, accuracy: 8 },
+      timestamp: Date.now() - 60_000,
+    } as Location.LocationObject);
+    const { result } = renderHook(() => useCaptureEligibility("washington-arch", "u-priya"));
+
+    await act(() => result.current.verify());
+
+    expect(result.current.state.status).toBe("stale");
+    expect(result.current.state.message).toContain("too old");
+  });
+
+  it("times out a hanging location request and restores retry state", async () => {
+    vi.useFakeTimers();
+    vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue(grantedPermission);
+    vi.mocked(Location.getCurrentPositionAsync).mockImplementation(() => new Promise(() => {}));
+    const { result } = renderHook(() => useCaptureEligibility("washington-arch", "u-priya"));
+
+    await act(async () => {
+      const verification = result.current.verify();
+      await vi.advanceTimersByTimeAsync(LOCATION_REQUEST_TIMEOUT_MS);
+      await verification;
+    });
+
+    expect(result.current.state.status).toBe("unavailable");
+    expect(result.current.state.message).toContain("timed out");
   });
 });

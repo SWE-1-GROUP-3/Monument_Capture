@@ -124,7 +124,7 @@ describe("records", () => {
 
   it("a newly approved capture shows up in records", () => {
     let state = createSeedState(NOW);
-    const at = { latitude: 40.7056, longitude: -74.0134, accuracyMeters: 5 };
+    const at = { latitude: 40.7056, longitude: -74.0134, accuracyMeters: 5, timestampMs: Date.now() };
     const started = startCapture(state, { monumentId: "farragut", playerId: "u-alex", position: { ...at, latitude: 40.7426, longitude: -73.9878 }, simulated: true }, NOW);
     state = submitCapturePhoto(started.state, started.capture.id, "data:x", NOW);
     expect(rec("farragut", state)).toMatchObject({ holds: 0, attempts: 1 });

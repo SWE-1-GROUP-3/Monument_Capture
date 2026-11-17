@@ -13,7 +13,24 @@ export type PositionResult =
   | { ok: true; position: PlayerPosition; simulated: boolean }
   | { ok: false; code: "permission-denied" | "unavailable"; message: string };
 
-const TIMEOUT_MS = 15_000;
+export const LOCATION_REQUEST_TIMEOUT_MS = 15_000;
+
+async function withTimeout<T>(promise: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () => reject(new Error("Location request timed out")),
+          LOCATION_REQUEST_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export async function getCapturePosition(): Promise<PositionResult> {
   const setting = getDemoState().settings.location;
@@ -27,36 +44,41 @@ export async function getCapturePosition(): Promise<PositionResult> {
     return {
       ok: true,
       simulated: true,
-      position: { latitude: setting.latitude, longitude: setting.longitude, accuracyMeters: setting.accuracyMeters },
+      position: {
+        latitude: setting.latitude,
+        longitude: setting.longitude,
+        accuracyMeters: setting.accuracyMeters,
+        timestampMs: Date.now(),
+      },
     };
   }
 
   try {
-    const permission = await Location.requestForegroundPermissionsAsync();
+    const permission = await withTimeout(Location.requestForegroundPermissionsAsync());
     if (permission.status !== "granted") {
       return { ok: false, code: "permission-denied", message: "Location permission is required before you can start a capture." };
     }
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    try {
-      const location = await Promise.race([
-        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }),
-        new Promise<never>((_resolve, reject) => {
-          timer = setTimeout(() => reject(new Error("timeout")), TIMEOUT_MS);
-        }),
-      ]);
-      return {
-        ok: true,
-        simulated: false,
-        position: {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          accuracyMeters: location.coords.accuracy,
-        },
-      };
-    } finally {
-      clearTimeout(timer);
-    }
-  } catch {
-    return { ok: false, code: "unavailable", message: "Your location is currently unavailable. Check location services and retry." };
+    const location = await withTimeout(
+      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }),
+    );
+    return {
+      ok: true,
+      simulated: false,
+      position: {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        accuracyMeters: location.coords.accuracy,
+        timestampMs: location.timestamp,
+      },
+    };
+  } catch (error) {
+    const timedOut = error instanceof Error && error.message === "Location request timed out";
+    return {
+      ok: false,
+      code: "unavailable",
+      message: timedOut
+        ? "The location check timed out. Retry when location services are ready."
+        : "Your location is currently unavailable. Check location services and retry.",
+    };
   }
 }
