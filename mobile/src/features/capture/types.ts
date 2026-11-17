@@ -20,7 +20,18 @@ export type ProximityEvaluation =
   | { status: "stale" };
 
 export type CaptureCheckState = {
-  status: "idle" | "checking" | "eligible" | "outside" | "inaccurate" | "stale" | "permission-denied" | "unavailable";
+  status:
+    | "idle"
+    | "checking"
+    | "eligible"
+    | "outside"
+    | "inaccurate"
+    | "stale"
+    | "locked"
+    | "duplicate"
+    | "inactive"
+    | "permission-denied"
+    | "unavailable";
   message: string;
   distanceMeters?: number;
 };

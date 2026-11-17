@@ -60,12 +60,101 @@ mvn test
 
 ## Current starter screens
 
-- Home dashboard
-- Interactive monument map (US-02 prototype)
-- Photo capture instructions
-- Player profile and activity summary
+- Sign-in with demo accounts
+- Player: home, map with hold status, monument detail, capture flow with photo, activity (holdings + history), profile
+- Moderator: home, review queue, review with approve/reject-with-reason, monument management
 
-The sample monument data is intentionally local and can be replaced with backend calls in a later sprint.
+See **Sprint demo** below.
+
+## Sprint demo: frontend-only MVP
+
+The app now runs the full MVP loop with **no backend**. All game data and rules
+live in the browser, and the data is saved in `localStorage` so it survives a
+page refresh. Run it the usual way:
+
+```bash
+cd mobile
+npm ci --registry=https://registry.npmjs.org
+npm run web -- --port 8082
+```
+
+### Demo script (about 3 minutes)
+
+The map is the home screen. Everything else opens as a bottom sheet from the bar at the bottom.
+
+1. Open http://localhost:8082 and log in as **Alex Rivera** (tap the shortcut, or `alex@demo.test` / `demo123`).
+2. **Map**: blue pins are free, orange are held by someone else, purple are yours. Tap **Bethesda Fountain** to see who holds it and the lock countdown.
+3. Tap **Washington Square Arch** → **📍 Teleport here (demo)**. The capture ring and "1 monument in range" appear, and **📷 Capture** turns on.
+4. **📷 Capture** → upload or take a photo → **Submit for review** → **Back to map**. The sheet now says "✅ Submitted! Waiting for moderator review."
+5. **Profile** → switch account to **Morgan · Mod**. The bar becomes Profile | Queue | Monuments. Open **Queue**, open Alex's capture and **Approve** (no reason needed).
+6. Switch back to **Alex**: the arch is purple, its sheet says **Yours**, and **Records** shows the new hold ("Last held: Now").
+7. **Profile → Demo tools → +1 hour**: the lock expires and the arch is free again.
+
+**Profile → Demo tools → Reset demo data** restores the starting state.
+
+### Error cases (how to show each one)
+
+Every error can be triggered on cue. The capture screens have a dashed **Demo** card with buttons for them, and **Profile → Demo tools** has the same switches.
+
+| Error | How to trigger it | What the player sees |
+| --- | --- | --- |
+| Wrong login | Login: any email with a wrong password | "Invalid email or password." |
+| Empty login | Login: press Log In with empty fields | "Please enter your email and password." |
+| Monument held by someone else | Bethesda Fountain → **Try to capture anyway** → Teleport here → Check | "Monument is locked. Held by Sam Chen for another 35 min." |
+| Monument already held by you | Capture Statue of Liberty as Alex | "Held by you for another …" |
+| Already submitted | Capture Brooklyn War Memorial as Alex | "Already submitted" |
+| Too far away | Check-in demo card → **400 m away** | "You are about 400 m away. Move 300 m closer." |
+| Poor GPS | Check-in demo card → **Poor GPS** | "Location not accurate enough (needs 50 m or better)" |
+| Location permission denied | Check-in demo card → **Location denied** | "Location permission needed" |
+| GPS unavailable | Check-in demo card → **GPS unavailable** | "Location unavailable" |
+| Camera permission denied | Photo step demo card → **Permission denied** → Open camera | "Camera access blocked" + how to allow it |
+| No camera | Photo step → **No camera** | "No camera found" + upload instead |
+| Camera in use | Photo step → **Camera in use** | "Camera is in use" |
+| Not a photo | **Upload a photo instead** → pick a .txt or .pdf | "That file isn't a photo." |
+| Reject without a reason (US-14) | Moderator review → Reject with an empty reason | "A reason is required to reject a capture." (Approving needs no reason.) |
+| Approve when already held (one-holder rule) | As Morgan, open Priya's **Bethesda Fountain** capture → Approve | "This monument is already held by Sam Chen … Reject this capture instead." |
+| Bad monument data | Monuments → Add → latitude `123` | "Latitude must be between -90 and 90." |
+
+The real camera errors also work without the switches. Blocking camera access in the browser (or opening the app on plain `http://` from another device) shows the same messages. The web camera uses a live preview (`getUserMedia`), so it needs `localhost` or `https`.
+
+### Accounts (US-01 mock login)
+
+Every demo account uses the password **`demo123`**. The login screen also has one-tap shortcuts.
+
+| Email | Role |
+| --- | --- |
+| alex@demo.test, sam@demo.test, priya@demo.test, demo@example.com | Player |
+| mod@demo.test | Moderator |
+
+An unknown email or wrong password shows "Invalid email or password."
+
+### Where the code lives
+
+| Path | What it is |
+| --- | --- |
+| `mobile/src/demo/types.ts` | The four MVP entities: User, Monument, Capture, CaptureReview |
+| `mobile/src/demo/rules.ts` | Every game rule as pure functions: capture checks (accuracy → distance → lock), lifecycle, approve/reject, locks derived at read time, monument management |
+| `mobile/src/demo/store.ts` | The single store screens read from (`useDemoState`) and write through (`demo.*`) |
+| `mobile/src/demo/seed.ts` | 15 NYC monuments, 4 users, and a starting story (holds, an expired lock, a queue) |
+| `mobile/src/demo/location.ts` | Real GPS or the simulated position from Demo tools |
+| `mobile/src/demo/selectors.ts` | Read-only selectors for the map UI: level, records, badges, range, area name |
+| `mobile/src/game/` | Map-first home (`GameHome.web.tsx`) and its bottom sheets (`sheets.web.tsx`) |
+| `mobile/src/theme/` | Baloo 2 font and the game stylesheet for web |
+| `mobile/src/auth/AuthContext.tsx` | US-01 `useAuth()` (Iris), backed by the store's session |
+| `mobile/src/utils/monumentAvailability.ts` | US-03 available / locked / unknown status (Yuming) |
+| `mobile/app/monuments/[monumentId].tsx` | US-03 monument details with live lock countdown |
+| `mobile/src/components/DemoTools.tsx` | Demo-only controls: fake location, fast-forward clock, reset |
+
+**Moving to Supabase or Firebase:** rewrite `store.ts` so each `demo.*` action calls the backend, and move the
+checks in `rules.ts` server-side (especially the lock check on approval, which needs a transaction or constraint
+so two moderators can never create two holders). Screens should not need to change.
+
+### Known demo limitations
+
+- Anyone can pick any account; roles are not secure. That is expected without a backend.
+- The "server clock" is the browser clock plus the Demo tools offset.
+- Photos are shrunk and stored in `localStorage` (a few MB total). If it fills up, a warning appears in Demo tools.
+- On native (Expo Go), data is kept in memory only and resets when the app restarts.
 
 ## US-02: Monument Map prototype
 

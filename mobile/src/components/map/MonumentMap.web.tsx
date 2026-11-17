@@ -6,7 +6,7 @@ import "leaflet/dist/leaflet.css";
 
 import { MonumentActions } from "./MonumentActions";
 import { getMonumentAvailability } from "../../utils/monumentAvailability";
-import { availabilityAppearance } from "./availabilityAppearance";
+import { availabilityAppearance, viewerHoldAppearance } from "./availabilityAppearance";
 
 import { getValidMonuments, isValidCoordinate } from "../../utils/mapData";
 
@@ -26,17 +26,18 @@ const monumentIcons = {
   available: pin(availabilityAppearance.available.color),
   locked: pin(availabilityAppearance.locked.color),
   unknown: pin(availabilityAppearance.unknown.color),
+  mine: pin(viewerHoldAppearance.color),
 };
 const playerIcon = pin("#2563eb");
 
-export function MonumentMap({ monuments, playerLocation, nowMs, onViewDetails }: MonumentMapProps) {
+export function MonumentMap({ monuments, playerLocation, nowMs, onViewDetails, onStartCapture, height = 420 }: MonumentMapProps) {
   const [tileError, setTileError] = useState(false);
   return (
     <div>
       <MapContainer
         center={[NYC_REGION.latitude, NYC_REGION.longitude]}
         zoom={11}
-        style={{ width: "100%", height: 420 }}
+        style={{ width: "100%", height }}
         aria-label="New York City monument map"
       >
         <TileLayer
@@ -45,7 +46,7 @@ export function MonumentMap({ monuments, playerLocation, nowMs, onViewDetails }:
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         {getValidMonuments(monuments).map((monument) => (
-          <MonumentMarker key={monument.id} monument={monument} nowMs={nowMs} onViewDetails={onViewDetails} />
+          <MonumentMarker key={monument.id} monument={monument} nowMs={nowMs} onViewDetails={onViewDetails} onStartCapture={onStartCapture} />
         ))}
         {isValidCoordinate(playerLocation) ? (
           <Marker position={[playerLocation.latitude, playerLocation.longitude]} icon={playerIcon} title="Your location">
@@ -62,7 +63,12 @@ export function MonumentMap({ monuments, playerLocation, nowMs, onViewDetails }:
   );
 }
 
-function MonumentMarker({ monument, nowMs, onViewDetails }: { monument: MapMonument; nowMs: number; onViewDetails: (monumentId: string) => void }) {
+function MonumentMarker({ monument, nowMs, onViewDetails, onStartCapture }: {
+  monument: MapMonument;
+  nowMs: number;
+  onViewDetails?: (monumentId: string) => void;
+  onStartCapture?: (monumentId: string) => void;
+}) {
   const { status } = getMonumentAvailability(monument, nowMs);
   const appearance = availabilityAppearance[status];
   const accessibleName = `${monument.name}: ${appearance.label}`;
@@ -82,13 +88,19 @@ function MonumentMarker({ monument, nowMs, onViewDetails }: { monument: MapMonum
   }, [accessibleName]);
 
   return (
-    <Marker ref={markerRef} position={[monument.latitude, monument.longitude]} icon={monumentIcons[status]}
+    <Marker ref={markerRef} position={[monument.latitude, monument.longitude]} icon={status === "locked" && monument.hold?.heldByViewer ? monumentIcons.mine : monumentIcons[status]}
       title={accessibleName} alt={accessibleName}>
       <Popup minWidth={160} maxWidth={280}>
         <div style={{ width: "min(260px, calc(100vw - 72px))", maxWidth: "100%", display: "grid", gap: 8 }}>
           <strong style={{ overflowWrap: "anywhere", paddingRight: 8 }}>{monument.name}</strong>
           <span>{appearance.description}</span>
-          <MonumentActions available={status === "available"} onViewDetails={() => onViewDetails(monument.id)} />
+          {onViewDetails ? (
+            <MonumentActions
+              available={status === "available"}
+              onViewDetails={() => onViewDetails(monument.id)}
+              onStartCapture={onStartCapture ? () => onStartCapture(monument.id) : undefined}
+            />
+          ) : null}
         </div>
       </Popup>
     </Marker>

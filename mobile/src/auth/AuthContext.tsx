@@ -1,53 +1,33 @@
+import type { ReactNode } from "react";
 
-import {
-  createContext,
-  useContext,
-  useState,
-  type ReactNode,
-} from "react";
+import { demo, useCurrentUser } from "../demo/store";
+import type { User } from "../demo/types";
+
+// US-01 mock authentication (originally by Iris).
+// The signed-in user now lives in the shared demo store, so the tabs, role
+// checks and screens all see the same session. The public API is unchanged:
+// wrap the app in <AuthProvider> and call useAuth().
 
 type AuthContextType = {
   isLoggedIn: boolean;
+  user: User | undefined;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
 };
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
+/** Kept so the app layout reads the same; the session itself is in the store. */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  async function login(email: string, password: string) {
-    // Mock login for the Sprint 3 frontend prototype.
-    // Replace with backend authentication in a future sprint.
-    if (
-      email.trim() === "demo@example.com" &&
-      password === "demo123"
-    ) {
-      setIsLoggedIn(true);
-      return true;
-    }
-
-    return false;
-  }
-
-  function logout() {
-    setIsLoggedIn(false);
-  }
-
-  return (
-    <AuthContext.Provider value={{ isLoggedIn, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <>{children}</>;
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-
-  if (!context) {
-    throw new Error("useAuth must be used inside AuthProvider");
-  }
-
-  return context;
+export function useAuth(): AuthContextType {
+  const user = useCurrentUser();
+  return {
+    isLoggedIn: !!user,
+    user,
+    // Mock login for the Sprint 3 frontend prototype.
+    // Replace with backend authentication in a future sprint.
+    login: async (email, password) => demo.login(email, password) !== null,
+    logout: () => demo.logout(),
+  };
 }

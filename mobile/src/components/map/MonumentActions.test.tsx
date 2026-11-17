@@ -13,7 +13,7 @@ it("places a small details link above a filled, disabled capture button, both wi
   expect(getComputedStyle(details).minHeight).toBe("44px");
   const start = screen.getByRole("button", { name: "Start Capture" });
   expect(getComputedStyle(start).minHeight).toBe("44px");
-  expect(getComputedStyle(start).backgroundColor).toBe("rgb(23, 107, 71)");
+  expect(getComputedStyle(start).backgroundColor).toBe("rgb(22, 163, 127)");
   expect(getComputedStyle(start).width).toBe("100%");
   expect(details.compareDocumentPosition(start) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(start.getAttribute("aria-disabled")).toBe("true");

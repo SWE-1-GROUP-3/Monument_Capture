@@ -37,8 +37,8 @@ describe("capture proximity evaluation", () => {
     }
   });
 
-  it.each([null, 0, 51, Number.NaN])(
-    "requires a retry when accuracy is %s meters",
+  it.each([null, 0, -2, 51, Number.POSITIVE_INFINITY, Number.NaN])(
+    "rejects invalid or poor accuracy: %s",
     (accuracyMeters) => {
       expect(evaluateCaptureProximity(captureMonument, {
         latitude: captureMonument.latitude,
@@ -49,7 +49,7 @@ describe("capture proximity evaluation", () => {
     },
   );
 
-  it("rejects invalid coordinates instead of calculating eligibility", () => {
+  it("rejects invalid coordinates", () => {
     expect(evaluateCaptureProximity(captureMonument, {
       latitude: Number.NaN,
       longitude: captureMonument.longitude,

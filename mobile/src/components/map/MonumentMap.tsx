@@ -4,18 +4,18 @@ import MapView, { Marker } from "react-native-maps";
 import { theme } from "../../constants/theme";
 import { getMonumentAvailability } from "../../utils/monumentAvailability";
 import { getValidMonuments, isValidCoordinate } from "../../utils/mapData";
-import { availabilityAppearance } from "./availabilityAppearance";
+import { availabilityAppearance, viewerHoldAppearance } from "./availabilityAppearance";
 import { MonumentActions } from "./MonumentActions";
 import { NYC_REGION, type MonumentMapProps } from "./types";
 
-export function MonumentMap({ monuments, playerLocation, nowMs, onViewDetails }: MonumentMapProps) {
+export function MonumentMap({ monuments, playerLocation, nowMs, onViewDetails, onStartCapture, height = 420 }: MonumentMapProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const validMonuments = getValidMonuments(monuments);
   const selected = validMonuments.find(monument => monument.id === selectedId);
   const selectedStatus = selected ? getMonumentAvailability(selected, nowMs).status : null;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { height }]}>
       <MapView style={StyleSheet.absoluteFill} initialRegion={NYC_REGION} onMarkerPress={(event) => {
         // Use the SDK's marker ID as the single source of selection, independent of clock renders.
         const id = event.nativeEvent.id;
@@ -27,7 +27,8 @@ export function MonumentMap({ monuments, playerLocation, nowMs, onViewDetails }:
           const appearance = availabilityAppearance[status];
           return (
             <Marker key={monument.id} identifier={monument.id} coordinate={monument}
-              accessibilityLabel={`${monument.name}: ${appearance.label}`} pinColor={appearance.color} />
+              accessibilityLabel={`${monument.name}: ${appearance.label}`}
+              pinColor={status === "locked" && monument.hold?.heldByViewer ? viewerHoldAppearance.color : appearance.color} />
           );
         })}
         {isValidCoordinate(playerLocation) ? (
@@ -44,7 +45,13 @@ export function MonumentMap({ monuments, playerLocation, nowMs, onViewDetails }:
             </Pressable>
           </View>
           <Text style={styles.status}>{availabilityAppearance[selectedStatus].description}</Text>
-          <MonumentActions available={selectedStatus === "available"} onViewDetails={() => onViewDetails(selected.id)} />
+          {onViewDetails ? (
+            <MonumentActions
+              available={selectedStatus === "available"}
+              onViewDetails={() => onViewDetails(selected.id)}
+              onStartCapture={onStartCapture ? () => onStartCapture(selected.id) : undefined}
+            />
+          ) : null}
         </View>
       ) : null}
     </View>

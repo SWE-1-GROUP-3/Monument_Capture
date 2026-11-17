@@ -44,7 +44,6 @@ export function evaluateCaptureProximity(
   if (!validTimestamp) {
     return { status: "stale" };
   }
-
   const validAccuracy = position.accuracyMeters !== null
     && Number.isFinite(position.accuracyMeters)
     && position.accuracyMeters > 0
