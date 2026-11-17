@@ -2,20 +2,20 @@
 
 Group 3 · November 17, 2026 · Step 3 implementation baseline
 
-Status: Core schema and gameplay contracts specified for implementation. Hosting and authentication remain pending team selection. No database migration, application code, account provisioning, or deployment has been performed by creating this document. Implementation defaults below are selected to complete the contract; they are not additional instructor or team approvals.
+Status: MVP scope and contract confirmed by the user on November 17, 2026 for `feat/supabase-mvp`. Supabase PostgreSQL/PostGIS, private Storage, and Auth are selected. No database migration, application code, account provisioning, or deployment has been performed by updating this document. Independent teammate approval is not claimed.
 
-Read alongside [MVP decisions](mvp-decisions.md). This is a proposed implementation baseline for team review; it does not claim that the listed APIs exist in the repository.
+Read alongside [MVP decisions](mvp-decisions.md). This is the confirmed implementation contract for this Supabase branch; it does not claim that the listed APIs exist in the repository.
 
 Sources: [Current MVP Design](https://docs.google.com/document/d/1Fl15HPBlyXUN6gXmj8ybehIFlhytORZeH_qnRWcB1TI/edit), [Current MVP Requirements](https://docs.google.com/document/d/1H2VGk9Opk9Qfs1-GMGAfWHScByrwF-YYS534Mgal1w0/edit), and subsequent November 17 confirmations.
 
-## 1. Decisions and remaining dependencies
+## 1. Confirmed decisions and implementation dependencies
 
 | Item | Contract |
 | --- | --- |
 | Backend | Spring Boot with Java 17; Controller → Service → Repository |
-| Database | PostgreSQL with PostGIS; database hosting pending |
-| Photo storage | Private object storage with signed direct uploads; provider pending |
-| Authentication | Real email/password authentication for pre-created accounts; provider and session mechanism pending |
+| Database | Supabase-hosted PostgreSQL with PostGIS |
+| Photo storage | Supabase private Storage with backend-issued signed direct uploads |
+| Authentication | Supabase Auth for pre-created email/password accounts; bearer access JWTs verified by Spring Boot |
 | Roles | player and moderator; moderators cover all monuments |
 | Sprint execution | Local frontend/backend, shared database and storage; public deployment deferred |
 | Persisted capture lifecycle | pending → approved or rejected; final decisions immutable |
@@ -23,7 +23,7 @@ Sources: [Current MVP Design](https://docs.google.com/document/d/1Fl15HPBlyXUN6g
 | Approval eligibility | Still pending, monument currently active, no current hold, accepted evidence available; no new player GPS reading |
 | Schema/API names | Plural snake_case tables; snake_case JSON; UUID identifiers; UTC timestamps |
 
-Core modeling, SQL migration drafts, service logic, and frontend mocks can proceed. Live database/storage integration and exact auth routes/session behavior require the pending choices. Step 3 is therefore specified except for these provider-dependent details.
+Core modeling, migrations, service logic, authentication, and frontend integration can proceed against the confirmed contracts. Live integration still requires a Supabase project, private bucket, database identities, signing-key configuration, and pre-created accounts. See [Supabase branch decisions](supabase-branch-decisions.md).
 
 ## 2. Backend boundaries and local configuration
 
@@ -31,25 +31,36 @@ One backend with Authentication, Monument, Upload, Capture, Moderation, and Repo
 
 All gameplay database writes go through Spring Boot. Browser clients do not directly update captures, reviews, roles, or monuments. Use a restricted application database identity; migration/admin credentials stay separate. Private storage credentials remain on the backend.
 
-Suggested environment names: DATABASE_URL, DATABASE_USERNAME, DATABASE_PASSWORD, AUTH_PROVIDER, STORAGE_PROVIDER, PHOTO_BUCKET, ALLOWED_ORIGINS. Provider-specific secret names are added after selection. No credentials are committed. Configure explicit local frontend origins; cookie credentials/CSRF or bearer-token behavior is completed with the authentication choice.
+Planned backend environment names: DATABASE_URL (JDBC PostgreSQL URL with TLS), DATABASE_USERNAME, DATABASE_PASSWORD, AUTH_PROVIDER=supabase, STORAGE_PROVIDER=supabase, SUPABASE_URL, SUPABASE_SECRET_KEY (backend only), SUPABASE_JWT_ISSUER, SUPABASE_JWT_AUDIENCE=authenticated, PHOTO_BUCKET, ALLOWED_ORIGINS. Frontend: EXPO_PUBLIC_API_URL, EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY. These names define the implementation contract; the current scaffold does not consume the new variables yet. No credentials are committed. Configure explicit local frontend origins and Authorization/Content-Type CORS headers; gameplay APIs use bearer tokens rather than authentication cookies.
+
+### Supabase authentication and session contract
+
+- The frontend uses the official Supabase client: `signInWithPassword({email,password})` for login, SDK refresh/session management, and `signOut({scope: "local"})` for logout of the current session. Login returns the provider session (access token, refresh token, expiry, user); passwords and refresh tokens never pass through gameplay APIs. There are no Spring Boot `/api/auth/login` or `/api/auth/logout` endpoints in this version.
+- Every protected Spring Boot request sends `Authorization: Bearer <access_token>`. Configure an asymmetric Supabase signing key. Spring Security verifies the signature against `SUPABASE_URL/auth/v1/.well-known/jwks.json`, pins the configured issuer (`SUPABASE_URL/auth/v1`) and audience (`authenticated`), requires and validates `exp`, validates `nbf` when present, and requires a UUID `sub`. Reject invalid/missing tokens with 401; use bounded JWKS caching that permits key rotation. Never trust a decoded but unverified token.
+- Map verified `sub` to `users.auth_subject_id`, then use the internal `users.id` for gameplay. Require a provisioned application user; an authenticated identity without an application mapping receives 403. Load player/moderator role from the application database on requests; the provider JWT `role=authenticated` is not the gameplay role. Never derive privileges from client-editable metadata.
+- Disable public signup. Administrators pre-create Supabase Auth accounts and matching application users through trusted tooling; no plaintext passwords or credentials in migrations. Store browser sessions using the SDK storage integration and native sessions in secure platform storage; clear account state/drafts from the active UI on logout/account change. Drafts remain isolated by internal user ID.
+- Logout revokes the current session refresh token and clears local tokens/account state. Report remote logout failure and clear local credentials regardless. Existing access JWTs can remain usable until expiry; configure a short access-token lifetime (target 15 minutes) and document this MVP limitation. Immediate server-side access-token revocation is outside this contract. Refresh failures require login again; never log tokens or include them in URLs.
+
+Provider behavior references: [password login](https://supabase.com/docs/guides/auth/passwords), [JWT verification](https://supabase.com/docs/guides/auth/jwts), and [logout semantics](https://supabase.com/docs/guides/auth/signout).
 
 Use versioned SQL migrations; select Flyway as the migration runner, with its dependency version matched to the repository's Spring Boot version during implementation. Do not use automatic ORM schema updates as the shared schema source of truth.
 
 ## 3. Schema contract
 
-Four core domain tables plus one supporting upload-lifecycle table. All foreign keys use restrictive deletion. Monument deactivation preserves capture/review history. All times are timestamptz; APIs serialize ISO 8601 UTC strings ending in Z. Generate UUIDs in the backend. All text lengths and finite numeric values are checked before persistence and with database constraints where applicable.
+Four core domain tables plus one supporting upload-lifecycle table in a dedicated `app` schema outside the exposed Supabase Data API schemas. Qualify migrations/queries consistently; SQL examples below omit schema qualification for readability. All foreign keys use restrictive deletion. Monument deactivation preserves capture/review history. All times are timestamptz; APIs serialize ISO 8601 UTC strings ending in Z. Generate UUIDs in the backend. All text lengths and finite numeric values are checked before persistence and with database constraints where applicable.
 
 ### users
 
 | Column | Type / rule |
 | --- | --- |
 | id | uuid PK; internal application identity |
+| auth_subject_id | uuid NOT NULL UNIQUE; verified Supabase Auth user ID (`sub`) |
 | email | text NOT NULL; unique case-insensitively through a unique lower(email) index |
 | display_name | varchar(100), nonblank |
 | role | text CHECK IN ('player','moderator') |
 | created_at | timestamptz NOT NULL, server time |
 
-Authentication-specific credential/session tables or provider identity mapping are deferred. Never store plaintext passwords. Email is not the stable identity key. The server maps an authenticated identity to users.id; clients cannot choose their role or player_id.
+Supabase manages credentials and sessions. The unique auth_subject_id mapping is populated only by trusted provisioning. Do not add a foreign key to the provider-managed auth schema; preserve application history independently and deny login when the provider identity is disabled/deleted. JWT-only verification may continue accepting an already issued token until expiry. Never store plaintext passwords. Email is not the stable identity key. The server maps a verified authenticated identity to users.id; clients cannot choose their role or player_id.
 
 ### monuments
 
@@ -159,7 +170,7 @@ Files: JPEG/PNG/WebP, 1..10485760 bytes. Generate keys such as players/{player_i
 
 ## 5. Common API conventions
 
-Base path /api. All routes require authentication except login and any selected provider's necessary auth endpoints. IDs are UUID strings; timestamps are ISO 8601 UTC. Backend identity supplies player/moderator IDs. Lists return {items, next_cursor, server_now}. Default limit 20, maximum 100; opaque cursors encode stable sort fields and are validated. UUID is the tie-breaker.
+Base path /api. All gameplay routes require authentication; the existing `/api/health` readiness endpoint remains public. Login/refresh/logout go directly to Supabase Auth. IDs are UUID strings; timestamps are ISO 8601 UTC. Backend identity supplies player/moderator IDs. Lists return {items, next_cursor, server_now}. Default limit 20, maximum 100; opaque cursors encode stable sort fields and are validated. UUID is the tie-breaker.
 
 Errors use {error:{code,message,details},server_now}. No sensitive stack traces. details may contain safe current status, current review, or retry guidance, but not other players' private capture evidence. 400 invalid input; 401 unauthenticated; 403 forbidden role; 404 inaccessible/missing resource; 409 state conflict; 413 oversized photo; 415 unsupported type; 422 invalid location; 503 temporary storage/database failure.
 
@@ -170,7 +181,7 @@ GET responses include server_now for authoritative countdown display. Holder sum
 | Method and route | Access | Request / result |
 | --- | --- | --- |
 | GET /api/me | Either role | {id,display_name,email,role,server_now} |
-| POST /api/auth/login; POST /api/auth/logout | Auth-specific | Desired login/logout capabilities; exact routes, payloads and session transport pending auth selection; do not implement mocks as real auth |
+| Supabase Auth SDK (outside /api) | Pre-created accounts | Email/password login, session refresh, and current-session logout as defined above; no Spring Boot auth proxy routes |
 | GET /api/monuments | Either role | Optional include_inactive=true only for moderators; items contain monument fields and availability/holder/lock_expires_at; name ASC, id ASC pagination |
 | GET /api/monuments/{id} | Either role | Same monument DTO; players receive 404 for inactive monuments |
 | GET /api/me/holdings | Player | Unexpired approved holdings, including active flag if monument later deactivated; expiry ASC, id ASC |
@@ -190,7 +201,7 @@ Monument DTO: {id,name,description,neighborhood,latitude,longitude,capture_radiu
 
 Review DTO: {id,decision,decision_source,moderator_id,reason,reviewed_at,lock_expires_at,caused_by_capture_id}. Pending review is null. Player responses need not expose moderator email or internal audit metadata beyond these authorized fields.
 
-Upload grants last 10 minutes where supported; adapters must return the actual provider expiry if fixed by the provider. Return actual required HTTP method/headers; the frontend must not assume all providers use the same upload protocol. A new grant is not a capture or reservation. An expired transport grant can be replaced by requesting a new upload while retaining the draft.
+Supabase signed upload grants currently last two hours; return that actual provider expiry in expires_at and persist it as grant_expires_at, rather than claiming a ten-minute lifetime. See [signed upload URLs](https://supabase.com/docs/reference/javascript/storage-from-createsigneduploadurl). Return actual required HTTP method/headers; the frontend must not assume all providers use the same upload protocol. A new grant is not a capture or reservation. An expired transport grant can be replaced by requesting a new upload while retaining the draft.
 
 Monument creation requires name, latitude, longitude; radius defaults to 100 and active defaults to true. Reject unknown/write-protected fields. PATCH null is permitted only for description/neighborhood, not required fields. Moderator listings use include_inactive=true to manage the complete catalog.
 
@@ -257,7 +268,7 @@ This lock/state transition prevents cleanup racing an accepted submission. A dra
 1. V1: enable PostGIS through authorized setup; create users and monuments with checks.
 2. V2: photo_uploads, captures, capture_reviews, foreign keys, lifecycle checks, and indexes. DDL migration must be validated on a disposable PostgreSQL/PostGIS database before shared application.
 3. V3: seed prototype monuments using stable UUIDs. Obtain actual repository coordinates during implementation rather than inventing values. Pre-create player/moderator accounts with selected auth tooling; no passwords in migrations.
-4. Auth-dependent migration: provider mapping or backend credential/session schema after auth selection. Database/storage configuration follows provider selection.
+4. Include the unique users.auth_subject_id mapping in V1. Provision Supabase Auth identities and matching application users through trusted tooling after schema creation; no backend password/session tables. Configure database/storage connections and signing keys for the selected Supabase project.
 5. Implement services and endpoints against this contract; frontend can use matching mock responses while dependencies are connected.
 
 Required verification: one pending capture under concurrent duplicates; safe lost-response retry even after location ages/hold changes; two moderators yield one winner and complete system rejections; submit-vs-approve race; location/radius edit preserves accepted eligibility; inactive approval refusal; hold expiry preserves visits; storage cleanup cannot delete accepted evidence; owner/role access; New York date boundaries.
@@ -269,8 +280,8 @@ Required verification: one pending capture under concurrent duplicates; safe los
 - [x] Gameplay routes, payload conventions, permissions, pagination and errors specified.
 - [x] GPS future handling, freshness timing, idempotency and cleanup defaults specified.
 - [x] Location eligibility preserved after submission; current active/hold checks retained at approval.
-- [ ] Team chooses database/photo hosting.
-- [ ] Team chooses authentication provider/session mechanism, then finalizes auth payloads, identity mapping and logout behavior.
+- [x] User selects Supabase PostgreSQL/PostGIS and private Storage for this branch.
+- [x] User selects Supabase Auth; bearer-token transport, SDK login/refresh/logout, identity mapping, and logout limitations specified.
 - [ ] Validate migrations and provider adapters during implementation; this document is not test evidence.
 
 ## Technical references

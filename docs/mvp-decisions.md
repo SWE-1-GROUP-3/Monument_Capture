@@ -8,9 +8,9 @@ Status: Agreed requirements for implementation. This document records decisions;
 
 ## Subsequent step 3 confirmation
 
-- Database/photo hosting and authentication provider/session mechanism remain pending team selection.
+- Confirmed for `feat/supabase-mvp`: Supabase PostgreSQL/PostGIS, private Storage, and Supabase Auth with email/password login and bearer access tokens. See [Supabase branch decisions](supabase-branch-decisions.md).
 - Preserve the location eligibility accepted at submission after monument coordinate/radius edits. Approval still checks current active status and current holds, without another player GPS reading or a new freshness check.
-- The [backend, schema, and API contract](backend-schema-api-contract.md) defines the implementation proposal, including accepted location snapshots, naming conventions, future GPS timestamp handling, upload cleanup, retries, and migration order. Technical defaults are distinct from the agreed gameplay requirements and remain subject to team review.
+- The [backend, schema, and API contract](backend-schema-api-contract.md) defines the confirmed implementation contract, including accepted location snapshots, naming conventions, future GPS timestamp handling, upload cleanup, retries, and migration order. The user confirmed the MVP scope and contract on November 17, 2026; these decisions do not claim implementation or independent teammate approval.
 - The backend currently has only a health endpoint; the documented gameplay APIs are not implemented yet.
 
 ## Latest confirmations — November 17, 2026
@@ -19,8 +19,8 @@ Status: Agreed requirements for implementation. This document records decisions;
 | --- | --- |
 | Backend | Keep Spring Boot with Java; the existing scaffold uses Java 17. |
 | Database | Keep PostgreSQL with PostGIS. |
-| Database/photo hosting | Supabase is proposed for both, pending team confirmation. RDS/S3 was the original plan; no hosting switch is confirmed yet. |
-| Authentication | Pre-created player/moderator accounts with email/password login. Public sign-up and password reset are outside MVP; auth provider/session mechanism still to choose. |
+| Database/photo hosting | Supabase PostgreSQL/PostGIS and private Storage selected for this branch. RDS/S3 was the original plan; the unchanged integration baseline remains available while teammates confirm their progress. |
+| Authentication | Supabase Auth; pre-created player/moderator accounts with email/password login and bearer access tokens verified by Spring Boot. Public sign-up and password reset are outside MVP. |
 | Monument management | Add, edit, activate, and deactivate stay in MVP. Seed the prototype’s existing monuments. |
 | Player history | Keep submitted captures with monument, submission time, status, and rejection reason. Unsubmitted drafts stay separate. |
 | Inactive monuments | Hidden from player map/discovery. Existing captures remain in history; pending captures stay pending. Moderators may reject with a reason, but cannot approve until reactivation. |
@@ -34,7 +34,7 @@ Status: Agreed requirements for implementation. This document records decisions;
 
 Detailed references: [Current MVP Requirements](https://docs.google.com/document/d/1H2VGk9Opk9Qfs1-GMGAfWHScByrwF-YYS534Mgal1w0/edit) · [Current MVP Design](https://docs.google.com/document/d/1Fl15HPBlyXUN6gXmj8ybehIFlhytORZeH_qnRWcB1TI/edit).
 
-Remaining implementation details: authentication provider/session mechanism, final schema/API names and migrations, future-timestamp handling, abandoned-upload cleanup, and later deployment hosting. Supabase requires team confirmation. This record is based on Sprint 1, Sprint 2, and the current discussion; the later revised-stories draft is excluded.
+Provider selection and the MVP schema/API contract are confirmed for this branch. Migrations, provider adapters, account provisioning, credentials, and live verification remain implementation work; later public deployment hosting remains deferred. Teammate AWS work has not been checked. This record is based on Sprint 1, Sprint 2, and the current discussion; the later revised-stories draft is excluded.
 
 ## 1. Scope and roles
 
@@ -130,7 +130,7 @@ The reviewed prototype uses local TypeScript objects, not an implemented shared 
 | Ownership | Approved capture associated with a one-hour hold; history remains after expiry |
 | Constraints | At most one pending capture per player/monument; valid relationships and location values |
 
-The exact ownership representation and final SQL schema are implementation choices, not finalized by this decision record.
+The linked backend contract specifies ownership through capture reviews and hold timestamps, plus the SQL schema to implement. Migrations still require disposable-database verification.
 
 ## 9. Acceptance checklist
 

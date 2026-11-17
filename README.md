@@ -12,14 +12,16 @@ The frontend currently uses a temporary local store and local authentication so 
 ## Current MVP documentation
 
 - [MVP decisions](docs/mvp-decisions.md) — agreed scope and gameplay rules.
-- [Backend, schema, and API contract](docs/backend-schema-api-contract.md) — proposed schema, interfaces, and remaining technical decisions.
+- [Backend, schema, and API contract](docs/backend-schema-api-contract.md) — confirmed schema/interfaces and Supabase authentication/storage contracts.
 - [Implementation plan](docs/implementation-plan.md) — task order, dependencies, owners, status, and acceptance conditions.
 - [Current MVP Requirements](https://docs.google.com/document/d/1H2VGk9Opk9Qfs1-GMGAfWHScByrwF-YYS534Mgal1w0/edit)
 - [Current MVP Design](https://docs.google.com/document/d/1Fl15HPBlyXUN6gXmj8ybehIFlhytORZeH_qnRWcB1TI/edit)
 
 These documents describe intended MVP behavior, not completed backend functionality. The backend currently exposes only the health endpoint.
 
-Database/photo hosting and authentication provider/session selection remain pending. The schema/API proposal and task ownership need team review.
+This branch selects Supabase PostgreSQL/PostGIS, private Storage, and Auth. The integration branch and MVP scope/contract were confirmed on November 17, 2026. See [Supabase branch decisions](docs/supabase-branch-decisions.md) for the rationale, implementation boundaries, remaining setup, and how to return to the baseline. Task ownership remains unassigned.
+
+These choices are documented on `feat/supabase-mvp`, based on `integration/mvp-baseline`. They do not provision services or implement authentication/database/storage integration. No remote push is authorized.
 
 For the upcoming sprint, the frontend and backend can run locally with shared database/storage connections. Public deployment is deferred.
 
