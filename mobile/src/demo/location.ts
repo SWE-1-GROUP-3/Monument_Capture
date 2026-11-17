@@ -7,7 +7,8 @@ export type PositionResult =
   | { ok: true; position: PlayerPosition }
   | { ok: false; code: "permission-denied" | "unavailable"; message: string };
 
-export const LOCATION_REQUEST_TIMEOUT_MS = 15_000;
+import { LOCATION_REQUEST_TIMEOUT_MS } from "./locationConfig";
+export { LOCATION_REQUEST_TIMEOUT_MS };
 
 async function withTimeout<T>(promise: Promise<T>): Promise<T> {
   let timer: ReturnType<typeof setTimeout> | undefined;

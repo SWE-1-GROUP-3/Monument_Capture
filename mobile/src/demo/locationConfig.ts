@@ -1,0 +1,1 @@
+export const LOCATION_REQUEST_TIMEOUT_MS = 15_000;
