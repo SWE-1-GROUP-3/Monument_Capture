@@ -44,6 +44,20 @@ For native development, run `npm start` and open the project in Expo Go or a com
 
 Login requires a configured Supabase project and a pre-created Auth account mapped to an application user. The former local-password login is removed. Follow the [setup guide](docs/local-supabase-setup.md) for credentials, test accounts, and device networking.
 
+## Shared Supabase test accounts
+
+These accounts are pre-created in the shared Supabase project and mapped to application users:
+
+| Email | Display name | Role |
+| --- | --- | --- |
+| `alex@monument.local` | Alex Rivera | Player |
+| `sam@monument.local` | Sam Chen | Player |
+| `moderator@monument.local` | Morgan Lee | Moderator |
+
+Get the account passwords privately from the project maintainer. These are app login passwords, separate from database credentials; the old prototype password does not apply.
+
+Teammates also need privately supplied `mobile/.env` and `backend/.env` configuration. Remove `SUPABASE_DB_ADMIN_PASSWORD` from shared copies. Never commit environment files or passwords.
+
 ## Run the backend
 
 First bootstrap PostgreSQL/PostGIS and configure `backend/.env` as described in the setup guide. Then:
