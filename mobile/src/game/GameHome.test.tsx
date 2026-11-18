@@ -5,6 +5,8 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { __setDemoStateForTests, getDemoState } from "../demo/store";
 import { createSeedState } from "../demo/seed";
 import { createPopulatedTestState } from "../demo/testFixtures";
+import { MonumentSheet } from "./sheets.web";
+import { saveDraftPhoto, startCapture } from "../demo/rules";
 import { GameHome } from "./GameHome.web";
 
 // The map home replaces the old Explore tab, so the US-02 checks from its test
@@ -193,4 +195,25 @@ it("keeps the play area in view when real GPS puts the player far from every mon
   // Every monument pin is still on the map, plus the player's own marker.
   expect(container.querySelectorAll(".mc-mon")).toHaveLength(getDemoState().monuments.filter((m) => m.active).length);
   expect(container.querySelector(".mc-me")).toBeTruthy();
+});
+
+
+it.each(["", "file://retained-photo"])("resumes an existing draft without another GPS check (photo=%s)", async photo => {
+  const now = Date.now();
+  const started = startCapture(createSeedState(now), {
+    playerId: "u-alex", monumentId: "washington-arch",
+    position: { latitude: 40.7312, longitude: -73.9971, accuracyMeters: 8, timestampMs: now },
+  }, now);
+  const state = saveDraftPhoto(started.state, started.capture.id, photo);
+  __setDemoStateForTests({ ...state, sessionUserId: "u-alex" });
+  const locationRequests = vi.mocked(Location.getCurrentPositionAsync).mock.calls.length;
+  render(<MonumentSheet monumentId="washington-arch" user={state.users[0]!} realLocation={null} now={now + 60_000} justSubmitted={false} />);
+  const resume = screen.getByRole("button", { name: "Resume draft" });
+  expect((resume as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(resume);
+  expect(router.push).toHaveBeenCalledWith("/capture?monumentId=washington-arch");
+  expect(getDemoState().drafts).toHaveLength(1);
+  expect(getDemoState().drafts[0]).toMatchObject({ id: started.capture.id, photoUri: photo });
+  expect(getDemoState().captures).toHaveLength(0);
+  expect(Location.getCurrentPositionAsync).toHaveBeenCalledTimes(locationRequests);
 });

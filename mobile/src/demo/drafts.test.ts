@@ -49,3 +49,14 @@ describe("account/monument drafts", () => {
     expect(getDemoState().drafts[0]?.photoUri).toBe("file://photo");
   });
 });
+
+
+it("resumes an existing draft after location becomes stale or the player moves away", () => {
+  const original = start();
+  const saved = saveDraftPhoto(original.state, original.capture.id, "file://photo");
+  const resumed = startCapture(saved, { playerId: "u-alex", monumentId: "washington-arch",
+    position: { ...position(), latitude: 0, timestampMs: 0 } }, Date.now());
+  expect(resumed.capture).toEqual(saved.drafts[0]);
+  expect(resumed.state.captures).toHaveLength(0);
+  expect(() => submitCapturePhoto(resumed.state, resumed.capture.id, "file://photo", Date.now(), { ...position(), timestampMs: 0 })).toThrow("too old");
+});

@@ -183,10 +183,13 @@ export function startCapture(
   now: number,
 ): { state: DemoState; capture: CaptureDraft } {
   if (findUser(state, input.playerId)?.role !== "player") throw new RuleError("Only players can create drafts.");
+  const existing = state.drafts.find(d => d.playerId === input.playerId && d.monumentId === input.monumentId);
+  if (existing) {
+    return { state: { ...state, drafts: [...state.drafts.filter(d => d.id !== existing.id), existing] }, capture: existing };
+  }
   const check = checkCaptureEligibility(state, input.monumentId, input.playerId, input.position, now);
   if (!check.ok) throw new RuleError(check.message);
-  const existing = state.drafts.find(d => d.playerId === input.playerId && d.monumentId === input.monumentId);
-  const capture: CaptureDraft = existing ?? {
+  const capture: CaptureDraft = {
     id: newId("draft"), monumentId: input.monumentId, playerId: input.playerId,
     status: "draft", distanceMeters: check.distanceMeters,
     accuracyMeters: Math.round(input.position.accuracyMeters ?? 0),

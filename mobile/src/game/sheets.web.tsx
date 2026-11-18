@@ -3,7 +3,7 @@
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 
-import { LOCK_DURATION_MS, findMonument, formatTimeAgo, getHistoryFor, getHoldingsFor, getPendingQueue, getPlayerStats, getHold } from "../demo/rules";
+import { LOCK_DURATION_MS, getInProgressCapture, findMonument, formatTimeAgo, getHistoryFor, getHoldingsFor, getPendingQueue, getPlayerStats, getHold } from "../demo/rules";
 import { getCapturePosition, type PositionResult } from "../demo/location";
 import {
   distanceTo,
@@ -81,7 +81,8 @@ export function MonumentSheet({ monumentId, user, realLocation, now, justSubmitt
   const isPlayer = user.role === "player";
   const view = monument ? monumentView(state, monument, user.id, now) : null;
   const pending = monument ? getPendingCaptureFor(state, user.id, monument.id) : undefined;
-  const needsCheck = isPlayer && !!view && view.kind === "free" && !pending;
+  const draft = isPlayer ? getInProgressCapture(state, user.id, monumentId) : undefined;
+  const needsCheck = isPlayer && !!view && view.kind === "free" && !pending && !draft;
 
   // Run the existing capture checks (accuracy → distance → lock) whenever the
   // monument or the monument's status changes.
@@ -121,6 +122,10 @@ export function MonumentSheet({ monumentId, user, realLocation, now, justSubmitt
     cta = "Edit monument";
     enabled = true;
     hint = "Moderators manage monuments; players capture them.";
+  } else if (draft) {
+    cta = "Resume draft";
+    enabled = true;
+    hint = "Continue your unfinished capture. Location and availability are checked again when submitting.";
   } else if (view.kind === "inactive") {
     cta = "Not in play";
     hint = "A moderator has taken this monument out of the game.";
@@ -150,6 +155,10 @@ export function MonumentSheet({ monumentId, user, realLocation, now, justSubmitt
     setError(null);
     if (!isPlayer) {
       router.push(`/manage-monument/${monument.id}`);
+      return;
+    }
+    if (draft) {
+      router.push(`/capture?monumentId=${monument.id}`);
       return;
     }
     if (elig.kind !== "result" || !elig.check.ok) return;
