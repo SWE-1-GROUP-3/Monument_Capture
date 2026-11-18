@@ -31,3 +31,5 @@ pg_prove -d "$db" --ext .sql "$root"/tests/database/
 
 echo "concurrency:"
 "$here/concurrency_one_holder.sh" "$db"
+echo "concurrency (decide_capture):"
+"$here/concurrency_decide.sh" "$db"

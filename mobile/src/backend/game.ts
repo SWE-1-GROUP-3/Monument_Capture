@@ -67,6 +67,60 @@ export function startRefusalMessage(r: StartRefusal, now = demoNow()): string {
   }
 }
 
+export function submitRefusalMessage(code: string): string {
+  switch (code) {
+    case "expired":
+      return "Your check-in expired before the photo was submitted. Check in again at the monument.";
+    case "not_in_progress":
+      return "This capture was already submitted or cancelled.";
+    case "not_found":
+      return "This capture no longer exists. Check in again at the monument.";
+    case "photo_missing":
+      return "The photo didn't finish uploading. Try submitting again.";
+    default:
+      return "The capture couldn't be submitted. Try again.";
+  }
+}
+
+type DecideRefusal = { ok: false; code: string; holder_name?: string; locked_until?: string; status?: string };
+
+export function decideRefusalMessage(r: DecideRefusal, now = demoNow()): string {
+  switch (r.code) {
+    case "reason_required":
+      return "A reason is required to reject a capture.";
+    case "already_held": {
+      const left = r.locked_until ? ` for another ${formatRemaining(Date.parse(r.locked_until) - now)}` : "";
+      return `This monument is already held${r.holder_name ? ` by ${r.holder_name}` : ""}${left}. Reject this capture instead.`;
+    }
+    case "already_decided":
+      return "Another moderator has already decided this capture.";
+    case "not_a_moderator":
+      return "Only moderators can review captures.";
+    case "own_capture":
+      return "You can't review your own capture.";
+    case "not_found":
+      return "This capture no longer exists.";
+    default:
+      return "The decision couldn't be saved. Try again.";
+  }
+}
+
+export const PHOTO_BUCKET = "capture-photos";
+
+/** Where a capture's photo must be uploaded; the server only accepts this path. */
+export function capturePhotoPath(playerId: string, captureId: string) {
+  return `${playerId}/${captureId}.jpg`;
+}
+
+/** A photo from the camera or picker (a JPEG data URL) as an uploadable file. */
+export async function photoToJpegBlob(photoUri: string): Promise<Blob> {
+  const blob = await (await fetch(photoUri)).blob();
+  if (blob.type !== "image/jpeg") {
+    throw new Error("That photo couldn't be prepared for upload. Take it again with the camera.");
+  }
+  return blob;
+}
+
 // ---------------------------------------------------------------------------
 // Actions
 // ---------------------------------------------------------------------------
@@ -102,6 +156,79 @@ export const game = {
       return { ok: true, captureId: reply.capture.id };
     } catch (e) {
       return failure(e, "Could not start the capture.");
+    }
+  },
+
+  /**
+   * Uploads the photo straight to Storage (the bytes never pass through a
+   * function), then asks the server to submit the capture for review. The
+   * server checks the photo is really there before accepting.
+   */
+  async submitCapture(captureId: string, photoUri: string): Promise<Result> {
+    if (backendMode === "local") {
+      try {
+        demo.submitPhoto(captureId, photoUri);
+        return { ok: true };
+      } catch (e) {
+        return failure(e, "Could not submit the capture.");
+      }
+    }
+    const playerId = getDemoState().sessionUserId;
+    if (!playerId) return { ok: false, message: "Sign in first." };
+    try {
+      const client = getSupabase();
+      const blob = await photoToJpegBlob(photoUri);
+      const upload = await client.storage
+        .from(PHOTO_BUCKET)
+        .upload(capturePhotoPath(playerId, captureId), blob, { contentType: "image/jpeg", upsert: false });
+      // A retry after a failed submit finds the photo already there: that's fine.
+      if (upload.error && !/exists|duplicate/i.test(upload.error.message)) {
+        throw new Error(
+          /row-level security|unauthori[sz]ed|403/i.test(upload.error.message)
+            ? submitRefusalMessage("expired")
+            : upload.error.message,
+        );
+      }
+      const { data, error } = await client.rpc("submit_capture", { p_capture_id: captureId });
+      if (error) throw new Error(error.message);
+      const reply = data as { ok: true } | { ok: false; code: string };
+      await refreshMap({ afterCurrent: true });
+      if (!reply.ok) return { ok: false, code: reply.code, message: submitRefusalMessage(reply.code) };
+      return { ok: true };
+    } catch (e) {
+      return failure(e, "Could not submit the capture.");
+    }
+  },
+
+  /**
+   * A moderator approves or rejects a pending capture. On the server this is
+   * one transaction that locks the monument first, so two moderators can
+   * never produce two holders.
+   */
+  async decideCapture(captureId: string, decision: "approved" | "rejected", reason: string): Promise<Result> {
+    if (backendMode === "local") {
+      try {
+        const moderator = getDemoState().sessionUserId;
+        if (!moderator) return { ok: false, message: "Sign in first." };
+        demo.review(captureId, moderator, decision, reason);
+        return { ok: true };
+      } catch (e) {
+        return failure(e, "Could not save the decision.");
+      }
+    }
+    try {
+      const { data, error } = await getSupabase().rpc("decide_capture", {
+        p_capture_id: captureId,
+        p_decision: decision,
+        p_reason: reason,
+      });
+      if (error) throw new Error(error.message);
+      const reply = data as { ok: true } | DecideRefusal;
+      await refreshMap({ afterCurrent: true });
+      if (!reply.ok) return { ok: false, code: reply.code, message: decideRefusalMessage(reply) };
+      return { ok: true };
+    } catch (e) {
+      return failure(e, "Could not save the decision.");
     }
   },
 

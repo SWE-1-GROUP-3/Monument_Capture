@@ -18,7 +18,7 @@ Each part below connects one piece of the game to the server. Each one lands as 
 | 1 | Real sign-up and login, profile created on sign-up | Iris | Done |
 | 2 | Map reads monuments and holds from the server, server clock | Bill | Done |
 | 3 | Start / cancel a capture on the server (distance, accuracy, moderator flags); deploy to GitHub Pages | Jason | Done |
-| 4 | Photos to Supabase Storage, submitting, moderator approve/reject and review queue | Aayush | Not started |
+| 4 | Photos to Supabase Storage, submitting, moderator approve/reject and review queue | Aayush | Done |
 | 5 | Moderators manage monuments and can end a hold early | Yuming | Not started |
 
 ## Run it

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createSeedState } from "../demo/seed";
 import { __setDemoStateForTests } from "../demo/store";
-import { game, startRefusalMessage } from "./game";
+import { decideRefusalMessage, game, startRefusalMessage } from "./game";
 import { __setSupabaseForTests } from "./supabaseClient";
 
 vi.mock("./config", () => ({
@@ -53,6 +53,83 @@ describe("game actions against Supabase", () => {
     __setSupabaseForTests({ rpc: vi.fn(async () => { throw new TypeError("Failed to fetch"); }) } as unknown as SupabaseClient);
     const result = await game.startCapture("m1", position, false);
     expect(result).toMatchObject({ ok: false, message: expect.stringMatching(/Can't reach/) });
+  });
+});
+
+// A 1x1 JPEG as a data URL, like the camera produces.
+const JPEG = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=";
+
+function fakeStorageClient(uploadError: { message: string } | null, submitReply: unknown) {
+  const upload = vi.fn(async () => ({ data: uploadError ? null : { path: "p" }, error: uploadError }));
+  const from = vi.fn(() => ({ upload }));
+  const rpc = vi.fn(async (name: string) => ({ data: name === "submit_capture" ? submitReply : emptyState, error: null }));
+  __setSupabaseForTests({ rpc, storage: { from } } as unknown as SupabaseClient);
+  return { upload, from, rpc };
+}
+
+describe("submitting a capture against Supabase", () => {
+  beforeEach(() => __setDemoStateForTests({ ...createSeedState(Date.now()), monuments: [], sessionUserId: "u1" }));
+  afterEach(() => __setSupabaseForTests(null));
+
+  it("uploads the JPEG to the server-decided path without overwrite, then submits", async () => {
+    const { upload, from, rpc } = fakeStorageClient(null, { ok: true });
+    expect(await game.submitCapture("c1", JPEG)).toEqual({ ok: true });
+    expect(from).toHaveBeenCalledWith("capture-photos");
+    expect(upload).toHaveBeenCalledWith("u1/c1.jpg", expect.anything(), { contentType: "image/jpeg", upsert: false });
+    expect((upload.mock.calls[0] as unknown as [string, Blob])[1].type).toBe("image/jpeg");
+    expect(rpc).toHaveBeenCalledWith("submit_capture", { p_capture_id: "c1" });
+  });
+
+  it("a retry finds the photo already uploaded and still submits", async () => {
+    const { rpc } = fakeStorageClient({ message: "The resource already exists" }, { ok: true });
+    expect(await game.submitCapture("c1", JPEG)).toEqual({ ok: true });
+    expect(rpc).toHaveBeenCalledWith("submit_capture", { p_capture_id: "c1" });
+  });
+
+  it("an upload refused by Storage policy means the check-in expired", async () => {
+    const { rpc } = fakeStorageClient({ message: "new row violates row-level security policy" }, { ok: true });
+    const result = await game.submitCapture("c1", JPEG);
+    expect(result).toMatchObject({ ok: false, message: expect.stringMatching(/expired/) });
+    expect(rpc).not.toHaveBeenCalledWith("submit_capture", expect.anything());
+  });
+
+  it("explains the server's refusal", async () => {
+    fakeStorageClient(null, { ok: false, code: "not_in_progress" });
+    expect(await game.submitCapture("c1", JPEG)).toEqual({
+      ok: false, code: "not_in_progress", message: "This capture was already submitted or cancelled.",
+    });
+  });
+
+  it("refuses anything that isn't a JPEG before uploading", async () => {
+    const { upload } = fakeStorageClient(null, { ok: true });
+    const result = await game.submitCapture("c1", "data:image/png;base64,iVBORw0KGgo=");
+    expect(result.ok).toBe(false);
+    expect(upload).not.toHaveBeenCalled();
+  });
+});
+
+describe("moderator decisions against Supabase", () => {
+  beforeEach(() => __setDemoStateForTests({ ...createSeedState(Date.now()), monuments: [] }));
+  afterEach(() => __setSupabaseForTests(null));
+
+  it("sends the decision and reason to decide_capture, then refreshes", async () => {
+    const rpc = fakeRpc({ decide_capture: { ok: true, decision: "approved" } });
+    expect(await game.decideCapture("c1", "approved", "")).toEqual({ ok: true });
+    expect(rpc).toHaveBeenCalledWith("decide_capture", { p_capture_id: "c1", p_decision: "approved", p_reason: "" });
+    expect(rpc).toHaveBeenCalledWith("get_game_state");
+  });
+
+  it("explains when another moderator got there first", async () => {
+    fakeRpc({ decide_capture: { ok: false, code: "already_held", holder_name: "Grace", locked_until: new Date(Date.now() + 30 * 60_000).toISOString() } });
+    const result = await game.decideCapture("c2", "approved", "");
+    expect(result).toMatchObject({ ok: false, code: "already_held", message: expect.stringMatching(/^This monument is already held by Grace for another 3\d min\. Reject this capture instead\.$/) });
+  });
+
+  it.each([
+    ["reason_required", "A reason is required to reject a capture."],
+    ["already_decided", "Another moderator has already decided this capture."],
+  ])("%s", (code, message) => {
+    expect(decideRefusalMessage({ ok: false, code })).toBe(message);
   });
 });
 

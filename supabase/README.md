@@ -25,6 +25,8 @@ with `rpc()` (added from Stage 1 on).
 | `20261118000000_profile_on_signup.sql` | 2026-11-17 |
 | `20261118010000_get_map.sql` | 2026-11-17 |
 | `20261118020000_start_capture.sql` | 2026-11-17 |
+| `20261118030000_capture_photos.sql` | 2026-11-17 |
+| `20261118040000_decide_capture.sql` | 2026-11-17 |
 
 Add a row here whenever you run a new migration against the hosted project.
 
@@ -67,5 +69,7 @@ supabase/local/run_local.sh
 
 This drops and recreates a throwaway database called `monument_test`, applies
 the stand-in and all migrations, runs the pgTAP tests, then runs the
-concurrency test: many sessions approving different captures of the same
-monument at the same instant, which must leave exactly one holder.
+concurrency tests: many sessions approving different captures of the same
+monument at the same instant, first straight against the constraint and then
+as many different moderators through `decide_capture()`. Both must leave
+exactly one holder; the second must also produce no errors or deadlocks.

@@ -269,13 +269,14 @@ function PhotoStep({ capture, monument, onSubmitted }: { capture: Capture; monum
   };
 
   const submit = () => {
-    if (!photo) return;
-    try {
-      demo.submitPhoto(capture.id, photo);
-      onSubmitted();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not submit the capture.");
-    }
+    if (!photo || busy) return;
+    setError(null);
+    setBusy(true);
+    void game.submitCapture(capture.id, photo).then((result) => {
+      setBusy(false);
+      if (result.ok) onSubmitted();
+      else setError(result.message);
+    });
   };
 
   return (
@@ -299,7 +300,7 @@ function PhotoStep({ capture, monument, onSubmitted }: { capture: Capture; monum
       )}
 
       {error ? <Banner tone="danger" title="Couldn't use that photo">{error}</Banner> : null}
-      <Button label="Submit for review" icon="send" onPress={submit} disabled={!photo || busy} />
+      <Button label={busy ? "Uploading…" : "Submit for review"} icon="send" onPress={submit} disabled={!photo || busy} />
       <Button label="Cancel capture" variant="ghost" onPress={() => { void game.cancelCapture(capture.id).then(() => returnToMap({ monumentId: monument.id })); }} />
 
       {devToolsEnabled ? (

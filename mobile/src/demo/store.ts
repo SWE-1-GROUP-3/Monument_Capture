@@ -35,6 +35,11 @@ function initialWorld(now: number): DemoState {
   return { ...seed, users: [], monuments: [], captures: [], reviews: [] };
 }
 
+/** How long an approval locks a monument: the server's setting in Supabase mode. */
+export function lockDurationMs(s: DemoState) {
+  return s.serverSettings?.lockDurationMs ?? rules.LOCK_DURATION_MS;
+}
+
 /** Everything that shifts the game clock: the demo fast-forward plus, in Supabase mode, the database clock. */
 export function totalClockOffsetMs(s: DemoState) {
   return s.settings.clockOffsetMs + (s.serverClockOffsetMs ?? 0);

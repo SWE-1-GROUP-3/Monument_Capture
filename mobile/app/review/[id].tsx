@@ -1,4 +1,8 @@
 import { router, useLocalSearchParams } from "expo-router";
+
+import { game } from "../../src/backend/game";
+import { usePhotoUrl } from "../../src/backend/usePhotoUrl";
+import { FLAG_LABEL } from "../../src/backend/flags";
 import { useState } from "react";
 import { Image, StyleSheet, Text, TextInput, View } from "react-native";
 
@@ -15,10 +19,9 @@ import {
   formatTimeAgo,
   getHold,
   getPendingQueue,
-  LOCK_DURATION_MS,
   reviewFor,
 } from "../../src/demo/rules";
-import { demo, getDemoState, useDemoState, useNow } from "../../src/demo/store";
+import { getDemoState, lockDurationMs, useDemoState, useNow } from "../../src/demo/store";
 import type { ReviewDecision } from "../../src/demo/types";
 
 const QUICK_REASONS: Record<ReviewDecision, string[]> = {
@@ -37,6 +40,7 @@ export default function ReviewScreen() {
   const now = useNow();
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [deciding, setDeciding] = useState(false);
 
   return (
     <RequireUser role="moderator">
@@ -57,22 +61,26 @@ export default function ReviewScreen() {
         const outside = capture.distanceMeters > monument.captureRadiusMeters;
 
         const decide = (decision: ReviewDecision) => {
+          if (deciding) return;
           setError(null);
-          try {
-            demo.review(capture.id, moderator.id, decision, reason);
+          setDeciding(true);
+          void game.decideCapture(capture.id, decision, reason).then((result) => {
+            setDeciding(false);
+            if (!result.ok) {
+              setError(result.message);
+              return;
+            }
             setReason("");
             // Read the store directly: the hook value is from before this write.
             const next = getPendingQueue(getDemoState()).find((q) => q.capture.id !== capture.id);
             if (next) router.replace(`/review/${next.capture.id}`);
             else returnToMap({ sheet: "queue" });
-          } catch (e) {
-            setError(e instanceof Error ? e.message : "Could not save the decision.");
-          }
+          });
         };
 
         return (
           <Screen title={monument.name} subtitle={`Submitted by ${player?.name ?? "unknown player"}`} back backTo="/?sheet=queue" backLabel="Queue">
-            <Image source={{ uri: capture.photoUri }} style={styles.photo} resizeMode="contain" accessibilityLabel="Submitted photo" />
+            <CapturePhoto photoUri={capture.photoUri} />
 
             <Card>
               <DetailRow
@@ -82,7 +90,10 @@ export default function ReviewScreen() {
               />
               <DetailRow label="GPS accuracy" value={`±${capture.accuracyMeters} m`} />
               <DetailRow label="Submitted" value={capture.submittedAt ? `${new Date(capture.submittedAt).toLocaleString()} (${formatTimeAgo(now - capture.submittedAt)})` : "—"} />
-              <DetailRow label="Player" value={player ? `${player.name} (${player.email})` : "Unknown"} />
+              <DetailRow label="Player" value={player ? (player.email ? `${player.name} (${player.email})` : player.name) : "Unknown"} />
+              {(capture.flags ?? []).map((flag) => (
+                <DetailRow key={flag} label="Flag" value={FLAG_LABEL[flag] ?? flag} tone="warning" />
+              ))}
               {capture.simulatedPosition ? <DetailRow label="Position source" value="Simulated (demo tool)" tone="warning" /> : null}
             </Card>
 
@@ -97,7 +108,7 @@ export default function ReviewScreen() {
                     {`The lock has ${formatRemaining(hold.lockedUntil - now)} left, so approving will be refused. Reject it, or wait for the lock to expire.`}
                   </Banner>
                 ) : (
-                  <Banner tone="info">{`Approving locks ${monument.name} to ${player?.name ?? "this player"} for ${formatRemaining(LOCK_DURATION_MS)}.`}</Banner>
+                  <Banner tone="info">{`Approving locks ${monument.name} to ${player?.name ?? "this player"} for ${formatRemaining(lockDurationMs(state))}.`}</Banner>
                 )}
 
                 <SectionTitle>Decision</SectionTitle>
@@ -123,8 +134,8 @@ export default function ReviewScreen() {
                 {error ? <Banner tone="danger">{error}</Banner> : null}
 
                 <View style={styles.actions}>
-                  <Button style={{ flex: 1 }} label="Reject" icon="close" variant="danger" onPress={() => decide("rejected")} />
-                  <Button style={{ flex: 1 }} label="Approve" icon="checkmark" onPress={() => decide("approved")} />
+                  <Button style={{ flex: 1 }} label="Reject" icon="close" variant="danger" disabled={deciding} onPress={() => decide("rejected")} />
+                  <Button style={{ flex: 1 }} label={deciding ? "Saving…" : "Approve"} icon="checkmark" disabled={deciding} onPress={() => decide("approved")} />
                 </View>
               </>
             )}
@@ -159,3 +170,16 @@ const styles = StyleSheet.create({
   row: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
   linkText: { color: theme.colors.primary, fontWeight: "700" },
 });
+
+/** The submitted photo; in Supabase mode a short-lived signed URL from private Storage. */
+function CapturePhoto({ photoUri }: { photoUri: string }) {
+  const url = usePhotoUrl(photoUri);
+  if (!url) {
+    return (
+      <View style={[styles.photo, { alignItems: "center", justifyContent: "center" }]}>
+        <Text>Loading photo…</Text>
+      </View>
+    );
+  }
+  return <Image source={{ uri: url }} style={styles.photo} resizeMode="contain" accessibilityLabel="Submitted photo" />;
+}
