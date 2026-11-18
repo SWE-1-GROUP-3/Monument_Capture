@@ -9,7 +9,8 @@ import { Banner, Button, Card } from "../../src/components/ui";
 import { theme } from "../../src/constants/theme";
 import { returnToMap } from "../../src/game/homeIntent";
 import { findMonument, validateMonument } from "../../src/demo/rules";
-import { demo, getDemoState } from "../../src/demo/store";
+import { getDemoState } from "../../src/demo/store";
+import { game } from "../../src/backend/game";
 
 type Form = { name: string; neighborhood: string; description: string; latitude: string; longitude: string; radius: string };
 
@@ -49,13 +50,15 @@ export default function EditMonumentScreen() {
   };
   const coordsValid = !validateMonument({ ...input, name: input.name || "x" });
 
+  const [saving, setSaving] = useState(false);
   const save = () => {
-    try {
-      const saved = demo.saveMonument(input);
-      returnToMap({ monumentId: saved.id });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save.");
-    }
+    if (saving) return;
+    setSaving(true);
+    void game.saveMonument(input).then((result) => {
+      setSaving(false);
+      if (result.ok) returnToMap({ monumentId: result.monumentId });
+      else setError(result.message);
+    });
   };
 
   return (
@@ -97,7 +100,7 @@ export default function EditMonumentScreen() {
             ) : null}
 
             {error ? <Banner tone="danger">{error}</Banner> : null}
-            <Button label={isNew ? "Add monument" : "Save changes"} icon="checkmark" onPress={save} />
+            <Button label={saving ? "Saving…" : isNew ? "Add monument" : "Save changes"} icon="checkmark" onPress={save} disabled={saving} />
           </Screen>
         )
       }

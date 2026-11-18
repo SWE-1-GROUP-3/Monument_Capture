@@ -263,6 +263,30 @@ export function reviewCapture(
   };
 }
 
+/**
+ * A moderator ends the current hold on a monument now. The approval stays in
+ * the history; the review records who ended it, when and why.
+ */
+export function releaseHold(
+  state: DemoState,
+  input: { monumentId: string; moderatorId: string; reason: string },
+  now: number,
+): DemoState {
+  const moderator = findUser(state, input.moderatorId);
+  if (!moderator || moderator.role !== "moderator") throw new RuleError("Only moderators can end a hold.");
+  const reason = input.reason.trim();
+  if (reason.length < MIN_REASON_LENGTH) throw new RuleError("A reason is required to end a hold.");
+  const hold = getHold(state, input.monumentId, now);
+  if (hold.status !== "held") throw new RuleError("This monument isn't held right now.");
+  return {
+    ...state,
+    reviews: state.reviews.map((r) =>
+      r.id === hold.review.id
+        ? { ...r, lockedUntil: Math.max(now, r.reviewedAt + 1), releasedAt: now, releasedBy: moderator.id, releaseReason: reason }
+        : r),
+  };
+}
+
 // ---------- Monument management ----------
 
 export type MonumentInput = Omit<Monument, "id" | "active"> & { id?: string };

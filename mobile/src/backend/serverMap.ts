@@ -39,6 +39,8 @@ export type ServerReview = {
   locked_until: string | null;
   moderator_id: string;
   moderator_name: string;
+  released_at?: string | null;
+  release_reason?: string | null;
 };
 
 export type ServerCapture = {
@@ -173,6 +175,8 @@ export function toReview(captureId: string, r: ServerReview): CaptureReview {
     reason: r.reason,
     reviewedAt: Date.parse(r.reviewed_at),
     lockedUntil: r.locked_until ? Date.parse(r.locked_until) : null,
+    releasedAt: r.released_at ? Date.parse(r.released_at) : null,
+    releaseReason: r.release_reason ?? null,
   };
 }
 

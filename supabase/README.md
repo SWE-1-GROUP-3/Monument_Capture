@@ -27,6 +27,8 @@ with `rpc()` (added from Stage 1 on).
 | `20261118020000_start_capture.sql` | 2026-11-17 |
 | `20261118030000_capture_photos.sql` | 2026-11-17 |
 | `20261118040000_decide_capture.sql` | 2026-11-17 |
+| `20261118050000_manage_monuments.sql` | 2026-11-17 |
+| `20261118060000_release_hold.sql` | 2026-11-17 |
 
 Add a row here whenever you run a new migration against the hosted project.
 

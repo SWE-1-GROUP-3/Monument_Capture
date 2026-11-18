@@ -193,6 +193,58 @@ export function MonumentSheet({ monumentId, user, realLocation, now, justSubmitt
           <button type="button" className="mc-small-btn" onClick={() => demo.teleportTo(monument)}>📍 Teleport here (demo)</button>
         </div>
       ) : null}
+      {!isPlayer && hold.status === "held" ? <RemoveHold monumentId={monument.id} holderName={hold.holder.name} /> : null}
+    </div>
+  );
+}
+
+/** Moderators: end the current hold now, with a reason the player sees. */
+function RemoveHold({ monumentId, holderName }: { monumentId: string; holderName: string }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  if (!open) {
+    return (
+      <div className="mc-hint">
+        <button type="button" className="mc-small-btn" onClick={() => { setOpen(true); setMessage(null); }}>
+          🔓 Remove {holderName}&apos;s hold
+        </button>
+        {message ? <div aria-live="polite">{message}</div> : null}
+      </div>
+    );
+  }
+  const submit = () => {
+    if (busy) return;
+    setBusy(true);
+    void game.releaseHold(monumentId, reason).then((result) => {
+      setBusy(false);
+      if (result.ok) {
+        setOpen(false);
+        setReason("");
+        setMessage(`${holderName}'s hold was removed. The monument is free to capture.`);
+      } else {
+        setMessage(result.message);
+      }
+    });
+  };
+  return (
+    <div className="mc-hint" style={{ display: "grid", gap: 8 }}>
+      <label htmlFor="release-reason">Why are you removing {holderName}&apos;s hold? (shown to them)</label>
+      <input
+        id="release-reason"
+        aria-label="Reason for removing the hold"
+        value={reason}
+        onChange={(e) => { setReason(e.target.value); setMessage(null); }}
+        placeholder="e.g. Photo was a screenshot"
+        style={{ padding: 10, borderRadius: 10, border: "1px solid #c9d6d8", font: "inherit" }}
+      />
+      <div style={{ display: "flex", gap: 8 }}>
+        <button type="button" className="mc-small-btn" disabled={busy} onClick={submit}>{busy ? "Removing…" : "Remove hold"}</button>
+        <button type="button" className="mc-small-btn" disabled={busy} onClick={() => { setOpen(false); setMessage(null); }}>Cancel</button>
+      </div>
+      {message ? <div aria-live="polite">{message}</div> : null}
     </div>
   );
 }
@@ -314,7 +366,9 @@ export function ActivitySheet({ user, now, onOpenMonument }: { user: User; now: 
             const s = capture.status === "pending"
               ? { ic: "⏳", bg: "#fff4d6", line: `Pending review · ${formatTimeAgo(now - (capture.submittedAt ?? now))}` }
               : capture.status === "approved"
-                ? { ic: "✅", bg: "#e3f6ee", line: `Approved · ${formatDay(review?.reviewedAt ?? null, now)}` }
+                ? review?.releasedAt
+                  ? { ic: "🔓", bg: "#fff4d6", line: `Approved · hold ended early by a moderator: ${review.releaseReason ?? ""}` }
+                  : { ic: "✅", bg: "#e3f6ee", line: `Approved · ${formatDay(review?.reviewedAt ?? null, now)}` }
                 : { ic: "❌", bg: "#fde8e8", line: `Rejected · ${review?.reason || "no reason given"}` };
             return (
               <li key={capture.id}>
@@ -460,7 +514,7 @@ export function MonumentsAdminSheet({ user, now }: { user: User; now: number }) 
             </div>
             <div style={{ marginLeft: "auto", display: "flex", gap: 6, flex: "none" }}>
               <button type="button" className="mc-small-btn" onClick={() => router.push(`/manage-monument/${monument.id}`)}>Edit</button>
-              <button type="button" className="mc-small-btn" onClick={() => demo.setMonumentActive(monument.id, !monument.active)}>
+              <button type="button" className="mc-small-btn" onClick={() => void game.setMonumentActive(monument.id, !monument.active)}>
                 {monument.active ? "Hide" : "Show"}
               </button>
             </div>
