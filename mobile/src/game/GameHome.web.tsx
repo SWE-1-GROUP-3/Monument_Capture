@@ -282,7 +282,7 @@ export function GameHome({ user, initialSheet, initialMonumentId, justSubmitted 
       <section className={`mc-sheet${sheet?.kind === "monument" ? " on" : ""}`} aria-label="Monument" aria-hidden={sheet?.kind !== "monument"}>
         <div className="mc-grab" />
         {sheet?.kind === "monument" ? (
-          <MonumentSheet key={sheet.id} monumentId={sheet.id} user={user} realLocation={location} now={now} justSubmitted={submittedFor === sheet.id} />
+          <MonumentSheet key={`${user.id}:${sheet.id}`} monumentId={sheet.id} user={user} realLocation={location} now={now} justSubmitted={submittedFor === sheet.id} />
         ) : null}
       </section>
       <section className={`mc-sheet${sheet?.kind === "profile" ? " on" : ""}`} aria-label="Profile" aria-hidden={sheet?.kind !== "profile"}>

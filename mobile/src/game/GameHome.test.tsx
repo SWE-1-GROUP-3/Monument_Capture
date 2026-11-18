@@ -217,3 +217,28 @@ it.each(["", "file://retained-photo"])("resumes an existing draft without anothe
   expect(getDemoState().captures).toHaveLength(0);
   expect(Location.getCurrentPositionAsync).toHaveBeenCalledTimes(locationRequests);
 });
+
+
+it("lets Sam retry stale GPS and start a separate draft while Alex's remains intact", async () => {
+  const now = Date.now();
+  const started = startCapture(createSeedState(now), {
+    playerId: "u-alex", monumentId: "washington-arch",
+    position: { latitude: 40.7312, longitude: -73.9971, accuracyMeters: 8, timestampMs: now },
+  }, now);
+  __setDemoStateForTests({ ...started.state, sessionUserId: "u-sam" });
+  vi.mocked(Location.requestForegroundPermissionsAsync).mockResolvedValue({ status: "granted" } as Location.LocationPermissionResponse);
+  vi.mocked(Location.getCurrentPositionAsync)
+    .mockResolvedValueOnce({ coords: { latitude: 40.7312, longitude: -73.9971, accuracy: 8 }, timestamp: now - 60_000 } as Location.LocationObject)
+    .mockImplementation(async () => ({ coords: { latitude: 40.7312, longitude: -73.9971, accuracy: 8 }, timestamp: Date.now() } as Location.LocationObject));
+  render(<MonumentSheet monumentId="washington-arch" user={started.state.users.find(u => u.id === "u-sam")!} realLocation={null} now={now} justSubmitted={false} />);
+  await screen.findByText("The location result was too old to verify your visit. Retry for a current location.");
+  expect((screen.getByRole("button", { name: "📷 Capture" }) as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.queryByRole("button", { name: "Resume draft" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Check location again" }));
+  await waitFor(() => expect((screen.getByRole("button", { name: "📷 Capture" }) as HTMLButtonElement).disabled).toBe(false));
+  fireEvent.click(screen.getByRole("button", { name: "📷 Capture" }));
+  expect(getDemoState().drafts).toHaveLength(2);
+  expect(getDemoState().drafts.find(d => d.playerId === "u-alex")).toEqual(started.capture);
+  expect(getDemoState().drafts.find(d => d.playerId === "u-sam")?.monumentId).toBe("washington-arch");
+  expect(getDemoState().captures).toHaveLength(0);
+});
