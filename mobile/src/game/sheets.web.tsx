@@ -77,7 +77,6 @@ export function MonumentSheet({ monumentId, user, realLocation, now, justSubmitt
   const monument = findMonument(state, monumentId);
   const [elig, setElig] = useState<Eligibility>({ kind: "idle" });
   const [error, setError] = useState<string | null>(null);
-  const [locationAttempt, setLocationAttempt] = useState(0);
 
   const isPlayer = user.role === "player";
   const view = monument ? monumentView(state, monument, user.id, now) : null;
@@ -105,7 +104,7 @@ export function MonumentSheet({ monumentId, user, realLocation, now, justSubmitt
     return () => {
       live = false;
     };
-  }, [monument?.id, needsCheck, user.id, monument, locationAttempt]);
+  }, [monument?.id, needsCheck, user.id, monument]);
 
   if (!monument || !view) return <Empty title="Monument not found" body="It may have been removed." />;
 
@@ -187,13 +186,7 @@ export function MonumentSheet({ monumentId, user, realLocation, now, justSubmitt
       </div>
       <button type="button" className="mc-cta" disabled={!enabled} onClick={onCta}>{cta}</button>
       <div className="mc-hint" aria-live="polite">{error ?? hint}</div>
-      {needsCheck && (elig.kind === "no-position" || (elig.kind === "result" && !elig.check.ok)) ? (
-        <button type="button" className="mc-cta" onClick={() => {
-          setError(null);
-          setElig({ kind: "checking" });
-          setLocationAttempt(attempt => attempt + 1);
-        }}>Check location again</button>
-      ) : null}
+
     </div>
   );
 }

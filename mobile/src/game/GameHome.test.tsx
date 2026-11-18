@@ -219,7 +219,7 @@ it.each(["", "file://retained-photo"])("resumes an existing draft without anothe
 });
 
 
-it("lets Sam retry stale GPS and start a separate draft while Alex's remains intact", async () => {
+it("lets Sam reopen with fresh GPS and start a separate draft while Alex's remains intact", async () => {
   const now = Date.now();
   const started = startCapture(createSeedState(now), {
     playerId: "u-alex", monumentId: "washington-arch",
@@ -230,11 +230,12 @@ it("lets Sam retry stale GPS and start a separate draft while Alex's remains int
   vi.mocked(Location.getCurrentPositionAsync)
     .mockResolvedValueOnce({ coords: { latitude: 40.7312, longitude: -73.9971, accuracy: 8 }, timestamp: now - 60_000 } as Location.LocationObject)
     .mockImplementation(async () => ({ coords: { latitude: 40.7312, longitude: -73.9971, accuracy: 8 }, timestamp: Date.now() } as Location.LocationObject));
-  render(<MonumentSheet monumentId="washington-arch" user={started.state.users.find(u => u.id === "u-sam")!} realLocation={null} now={now} justSubmitted={false} />);
+  const { unmount } = render(<MonumentSheet monumentId="washington-arch" user={started.state.users.find(u => u.id === "u-sam")!} realLocation={null} now={now} justSubmitted={false} />);
   await screen.findByText("The location result was too old to verify your visit. Retry for a current location.");
   expect((screen.getByRole("button", { name: "📷 Capture" }) as HTMLButtonElement).disabled).toBe(true);
   expect(screen.queryByRole("button", { name: "Resume draft" })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Check location again" }));
+  unmount();
+  render(<MonumentSheet monumentId="washington-arch" user={started.state.users.find(u => u.id === "u-sam")!} realLocation={null} now={Date.now()} justSubmitted={false} />);
   await waitFor(() => expect((screen.getByRole("button", { name: "📷 Capture" }) as HTMLButtonElement).disabled).toBe(false));
   fireEvent.click(screen.getByRole("button", { name: "📷 Capture" }));
   expect(getDemoState().drafts).toHaveLength(2);
