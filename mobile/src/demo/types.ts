@@ -64,6 +64,10 @@ export type CaptureReview = {
   reviewedAt: number;
   /** Set on approval: the monument is locked to the player until this time. */
   lockedUntil: number | null;
+  /** Set when a moderator ended the hold early (lockedUntil then equals this time). */
+  releasedAt?: number | null;
+  releasedBy?: string | null;
+  releaseReason?: string | null;
 };
 
 /** Demo-only settings. Not part of the real data model. */

@@ -187,6 +187,9 @@ export const demo = {
   review(captureId: string, moderatorId: string, decision: ReviewDecision, reason: string) {
     setState(rules.reviewCapture(state, { captureId, moderatorId, decision, reason }, demoNow()));
   },
+  releaseHold(monumentId: string, moderatorId: string, reason: string) {
+    setState(rules.releaseHold(state, { monumentId, moderatorId, reason }, demoNow()));
+  },
   saveMonument(input: rules.MonumentInput) {
     const result = rules.saveMonument(state, input);
     setState(result.state);

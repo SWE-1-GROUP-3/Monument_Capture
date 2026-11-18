@@ -6,7 +6,7 @@
 //
 // Screens only ever see { ok: true, ... } or { ok: false, message }.
 
-import { formatDistance, formatRemaining, RuleError } from "../demo/rules";
+import { formatDistance, formatRemaining, type MonumentInput, RuleError, validateMonument } from "../demo/rules";
 import { demo, demoNow, getDemoState } from "../demo/store";
 import type { PlayerPosition } from "../features/capture/types";
 import { backendMode } from "./config";
@@ -104,6 +104,22 @@ export function decideRefusalMessage(r: DecideRefusal, now = demoNow()): string 
       return "The decision couldn't be saved. Try again.";
   }
 }
+
+const MONUMENT_REFUSALS: Record<string, string> = {
+  not_a_moderator: "Only moderators can manage monuments.",
+  bad_name: "Name is required.",
+  bad_latitude: "Latitude must be between -90 and 90.",
+  bad_longitude: "Longitude must be between -180 and 180.",
+  bad_radius: "Capture radius must be between 10 and 500 meters.",
+  not_found: "This monument no longer exists.",
+};
+
+const RELEASE_REFUSALS: Record<string, string> = {
+  not_a_moderator: "Only moderators can end a hold.",
+  reason_required: "A reason is required to end a hold.",
+  not_held: "This monument isn't held right now.",
+  not_found: "This monument no longer exists.",
+};
 
 export const PHOTO_BUCKET = "capture-photos";
 
@@ -229,6 +245,81 @@ export const game = {
       return { ok: true };
     } catch (e) {
       return failure(e, "Could not save the decision.");
+    }
+  },
+
+  /** Moderators: add (no id) or edit a monument. */
+  async saveMonument(input: MonumentInput & { icon?: string }): Promise<Result<{ monumentId: string }>> {
+    if (backendMode === "local") {
+      try {
+        return { ok: true, monumentId: demo.saveMonument(input).id };
+      } catch (e) {
+        return failure(e, "Could not save.");
+      }
+    }
+    const invalid = validateMonument(input);
+    if (invalid) return { ok: false, message: invalid };
+    try {
+      const { data, error } = await getSupabase().rpc("save_monument", {
+        p_id: input.id ?? null,
+        p_name: input.name,
+        p_neighborhood: input.neighborhood,
+        p_description: input.description,
+        p_latitude: input.latitude,
+        p_longitude: input.longitude,
+        p_capture_radius_m: Math.round(input.captureRadiusMeters),
+        p_icon: input.icon ?? null,
+      });
+      if (error) throw new Error(error.message);
+      const reply = data as { ok: true; monument_id: string } | { ok: false; code: string };
+      await refreshMap({ afterCurrent: true });
+      if (!reply.ok) return { ok: false, code: reply.code, message: MONUMENT_REFUSALS[reply.code] ?? "Could not save." };
+      return { ok: true, monumentId: reply.monument_id };
+    } catch (e) {
+      return failure(e, "Could not save.");
+    }
+  },
+
+  /** Moderators: take a monument out of play, or put it back. */
+  async setMonumentActive(monumentId: string, active: boolean): Promise<Result> {
+    if (backendMode === "local") {
+      demo.setMonumentActive(monumentId, active);
+      return { ok: true };
+    }
+    try {
+      const { data, error } = await getSupabase().rpc("set_monument_active", { p_id: monumentId, p_active: active });
+      if (error) throw new Error(error.message);
+      const reply = data as { ok: true } | { ok: false; code: string };
+      await refreshMap({ afterCurrent: true });
+      if (!reply.ok) return { ok: false, code: reply.code, message: MONUMENT_REFUSALS[reply.code] ?? "Could not update." };
+      return { ok: true };
+    } catch (e) {
+      return failure(e, "Could not update.");
+    }
+  },
+
+  /** Moderators: end the current hold on a monument now, with a reason the player sees. */
+  async releaseHold(monumentId: string, reason: string): Promise<Result<{ holderName?: string }>> {
+    if (backendMode === "local") {
+      try {
+        const moderator = getDemoState().sessionUserId;
+        if (!moderator) return { ok: false, message: "Sign in first." };
+        demo.releaseHold(monumentId, moderator, reason);
+        return { ok: true };
+      } catch (e) {
+        return failure(e, "Could not end the hold.");
+      }
+    }
+    if (reason.trim().length < 3) return { ok: false, message: RELEASE_REFUSALS.reason_required! };
+    try {
+      const { data, error } = await getSupabase().rpc("release_hold", { p_monument_id: monumentId, p_reason: reason });
+      if (error) throw new Error(error.message);
+      const reply = data as { ok: true; holder_name?: string } | { ok: false; code: string };
+      await refreshMap({ afterCurrent: true });
+      if (!reply.ok) return { ok: false, code: reply.code, message: RELEASE_REFUSALS[reply.code] ?? "Could not end the hold." };
+      return { ok: true, holderName: reply.holder_name };
+    } catch (e) {
+      return failure(e, "Could not end the hold.");
     }
   },
 
